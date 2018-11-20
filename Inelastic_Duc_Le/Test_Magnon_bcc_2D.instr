@@ -1,0 +1,74 @@
+/*******************************************************************************
+*         McStas instrument definition URL=http://www.mcstas.org
+*
+* Instrument: Test_Sqq_w
+*
+* %Identification
+* Written by: P. Willendrup
+* Date: June, 2018
+* Origin: DTU
+*
+* %INSTRUMENT_SITE: Tests
+*
+* Test instrument for the Sqq_w_monitor and Magnon_bcc components, derived from template_Laue 
+*
+* %Description
+*
+* %Parameters
+* lambda:     [AA]      Central wavelength of wavelength distribution
+* dlambda:    [AA]      Width of wavelength distribution
+* Rotation:   [deg]     Sample orientation
+* inelastic:  [in 0:1]  Fraction of statistics to scatter inelastically
+* aa:         [AA]      BCC lattice constant
+* sample_J:   [meV]     Magnitude of sample nearest-neighbour interaction
+* TT:         [K]       Sample temperature
+* FerroMagnet:[boolean] Flag to choose if sample is FM or AFM
+* verbose:    [boolean] Flag to allow verbose information from Magnon comp
+* imultiplier:[1]       Parameter to rescale intensity-output from Magnon comp
+*
+* %End
+*******************************************************************************/
+
+/* Change name of instrument and input parameters with default values */
+DEFINE INSTRUMENT Test_Magnon_bcc_2D(lambda=10, dlambda=9.9, Rotation=0, inelastic=1, aa=4,
+				     sample_J=2, TT=300, FerroMagnet=0, Verbose=0, imultiplier=1,OM=0, TH=0, FI=-45, string SQW="test_dat.sqw")
+
+DECLARE %{
+  double Samplechoice;
+%}
+
+TRACE
+
+COMPONENT Origin = Progress_bar()
+  AT (0,0,0) ABSOLUTE
+
+COMPONENT source = Source_simple(
+  radius=0.02, focus_xw=0.01, focus_yh=0.01, target_index=1,
+  lambda0=lambda, dlambda=dlambda, flux=1e12)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT sample = Single_crystal_inelastic(sqw = SQW,
+	  ax =-aa , ay = 0, az =0 , bx =0 , by =0, bz = aa , cx =0 , cy = aa , cz =0,
+					    xwidth=0.01, yheight=0.01, zdepth=0.01, delta_d_d=2e-1, mosaic = 5,order=1)
+  AT (0, 0, 5.1) RELATIVE source ROTATED (TH,OM,FI) RELATIVE source
+  EXTEND %{
+  if(!SCATTERED) ABSORB;
+  %}
+  
+  COMPONENT Sqqw = Sqq_w_monitor(filename="qa_vs_qb",nE=3,nqa=401,nqb=401,qamin=-8,qamax=8,qbmin=-8,qbmax=8,index=-1,Emin=9, Emax=11, yheight=2)
+AT (0,0,0) RELATIVE sample ROTATED (0,0,0) RELATIVE source
+
+COMPONENT det= PSD_monitor_4PI(radius=2.1, nx=360,ny=180,filename="psd")
+  AT (0,0,0) RELATIVE sample ROTATED (0,0,0) RELATIVE source
+
+  COMPONENT TTArm = Arm()
+    AT (0,0,0) RELATIVE det ROTATED (0,-45,0) RELATIVE det
+
+  
+  COMPONENT PSD = PSD_monitor(filename="psd2",xwidth=2, yheight=2)
+  AT (0,0,2.101) RELATIVE TTArm
+
+  COMPONENT nD = Monitor_nD(xwidth=2, yheight=2, options="E bins=128 limits=[6 20]")
+   AT (0,0,2.102) RELATIVE TTArm
+END
+
