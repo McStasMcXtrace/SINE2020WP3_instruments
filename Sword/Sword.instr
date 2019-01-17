@@ -1,0 +1,498 @@
+/*******************************************************************************
+*
+* McStas, neutron ray-tracing package
+*         Copyright (C) 1997-2008, All rights reserved
+*         Risoe National Laboratory, Roskilde, Denmark
+*         Institut Laue Langevin, Grenoble, France
+*
+* Instrument: test
+*
+* %Identification
+* Written by: Mads Bertelsen
+* Date: September 2015
+* Origin: University of Copenhagen
+* Version: $Revision: 0.1 $
+*
+* Simple test instrument for sample component.
+*
+* %Description
+* simple test instrument for sample component.
+*
+* %End
+*******************************************************************************/
+
+DEFINE INSTRUMENT test(L_min=0.5,L_max=5.0,mixture=0.1,angle=0)
+
+DECLARE
+%{
+double sword_height;
+double rust_thickness;
+double blade_mask_radius;
+double blade_tip_mask_radius;
+double cut_radius;
+double cut_depth;
+double sword_depth;
+double sword_width;
+double blade_start_width;
+double blade_top_width;
+double blade_tip_start_width;
+double core_width_top;
+double core_side_top_length;
+double core_width_bottom;
+double core_side_bottom_length;
+double width_angle;
+double tip_x_multiplier;
+
+double tip_height;
+
+double blade_angle_deg;
+double blade_angle_tip_deg;
+
+%}
+
+INITIALIZE
+%{
+sword_width = 0.06;
+blade_start_width = 0.032;
+sword_depth = 0.015; // 0.02
+sword_height = 0.6;
+rust_thickness = 0.002;
+blade_mask_radius = 0.07;
+cut_depth = 0.002; // 0.003
+//cut_radius = 0.15;
+cut_radius = (0.5*blade_start_width*0.5*blade_start_width+cut_depth*cut_depth)/2.0/cut_depth;
+core_width_top = 0.032;
+//core_width_top = 0.0707;
+core_side_top_length = core_width_top/sqrt(2);
+core_width_bottom = 0.0404;
+width_angle = 2.0/4.0;
+blade_tip_start_width = -0.02;
+blade_tip_mask_radius = 0.068;
+
+//blade_tip_mask_radius = 0.30;
+
+
+core_side_bottom_length = core_width_bottom/sqrt(2);
+
+
+tip_height = 0.2;
+tip_x_multiplier = -0.5;
+
+/*
+sword_width = 0.06;
+blade_start_width = 0.058;
+sword_depth = 0.015; // 0.02
+sword_height = 0.1;
+rust_thickness = 0.001;
+blade_mask_radius = 0.07;
+cut_depth = 0.002; // 0.003
+//cut_radius = 0.15;
+cut_radius = (0.5*blade_start_width*0.5*blade_start_width+cut_depth*cut_depth)/2.0/cut_depth;
+core_width_top = 0.0424;
+//core_width_top = 0.0707;
+core_side_top_length = core_width_top/sqrt(2);
+core_width_bottom = 0.0707;
+
+core_side_bottom_length = core_width_bottom/sqrt(2);
+*/
+
+// Calculate sword slope
+blade_angle_deg = 180/3.14159*atan((core_width_bottom-core_width_top)/sword_height);
+blade_angle_tip_deg = 180/3.14159*atan((0.8*core_width_top)/tip_height);
+
+// change in width
+blade_top_width = blade_start_width - 2.0*(core_width_bottom-core_width_top);
+
+
+printf("sword height = %f \n",sword_height);
+%}
+
+TRACE
+
+COMPONENT a1 = Progress_bar()
+  AT (0,0,0) ABSOLUTE
+
+COMPONENT source = Source_div(
+//        xwidth=0.0005, yheight=0.0005,focus_aw=15, focus_ah=15,
+        xwidth=0.25, yheight=1.0,focus_aw=0.1, focus_ah=0.1, gauss=0,
+        lambda0 = (L_min+L_max)*0.5,
+        dlambda = 0.5*(L_max-L_min))
+AT (0,0,0) RELATIVE a1
+ROTATED (0,0,0) RELATIVE a1
+
+COMPONENT pre_sample_slit = Slit(xwidth=0.3,yheight=1.0)
+AT (0,0,8) RELATIVE a1
+ROTATED (0,0,0) RELATIVE a1
+
+COMPONENT graph = Arm()
+AT (0,0,0) RELATIVE a1
+ROTATED (0,0,0) RELATIVE a1
+
+COMPONENT Al_incoherent = Incoherent_process(
+  sigma=4*0.0082,packing_factor=1,unit_cell_volume=66.4)
+AT (0,0,0) ABSOLUTE
+
+// P1
+COMPONENT Al_powder = Powder_process(reflections="Al.laz")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Al = Union_make_material(
+  my_absorption=100*4*0.231/66.4,process_string="Al_incoherent,Al_powder")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Fe_incoherent = Incoherent_process(sigma=2*0.4,packing_factor=1,unit_cell_volume=24.04)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Fe_powder = Powder_process(reflections="Fe.laz")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Fe = Union_make_material(my_absorption=100*2*2.56/24.04)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Fe_alpha_incoherent = Incoherent_process(sigma=0.80000,packing_factor=1,unit_cell_volume=23.55352)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Fe_alpha_powder = Powder_process(reflections="alpha_Fe.laz")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Fe_alpha = Union_make_material(my_absorption=100*5.12000/23.55352)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT cementite_incoherent = Incoherent_process(sigma=4.80398,packing_factor=1,unit_cell_volume=155.15118)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT cementite_powder = Powder_process(reflections="cementite_300K.laz")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT cementite = Union_make_material(my_absorption=100*30.73400/155.15118)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT mix_Fe_alpha_incoherent = Incoherent_process(sigma=0.80000,packing_factor=1,unit_cell_volume=23.55352,packing_factor=1.0-mixture)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT mix_cementite_incoherent = Incoherent_process(sigma=4.80398,packing_factor=1,unit_cell_volume=155.15118,packing_factor=mixture)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT mix_Fe_alpha_powder = Powder_process(reflections="alpha_Fe.laz",packing_factor=1.0-mixture)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT mix_cementite_powder = Powder_process(reflections="cementite_300K.laz",packing_factor=mixture)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT iron_mix = Union_make_material(my_absorption=mixture*100*30.73400/155.15118+(1.0-mixture)*100*5.12000/23.55352)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Fe3O4_incoherent = Incoherent_process(
+  sigma=2.40639,packing_factor=1,unit_cell_volume=157.15089)
+AT (0,0,0) ABSOLUTE
+
+// P1
+COMPONENT Fe3O4_powder = Powder_process(reflections="Fe3O4_mp-19306_computed.laz")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Fe3O4 = Union_make_material(
+  my_absorption=100*15.36152/157.15089,process_string="Fe3O4_incoherent,Fe3O4_powder")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Fe2O3_incoherent = Incoherent_process(
+  sigma=4.81438,packing_factor=1,unit_cell_volume=302.72198)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Fe2O3_powder = Powder_process(reflections="Fe2O3.laz")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Fe2O3 = Union_make_material(
+  my_absorption=100*30.72342/137.06268,process_string="Fe2O3_incoherent,Fe2O3_powder")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT FeOOH_incoherent = Incoherent_process(
+  sigma=322.63895,packing_factor=1,unit_cell_volume=302.72198)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT FeOOH_powder = Powder_process(reflections="FeOOH.laz")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT FeOOH = Union_make_material(
+  my_absorption=100*11.57192/137.06268,process_string="FeOOH_incoherent,FeOOH_powder")
+AT (0,0,0) ABSOLUTE
+
+
+
+COMPONENT Turn_table_center = Arm()
+AT (0,0,9.5) RELATIVE graph
+ROTATED (0,angle,0) RELATIVE graph
+
+COMPONENT object_center = Arm()
+AT (0,-0.02,0) RELATIVE Turn_table_center
+ROTATED (0,0,0) RELATIVE Turn_table_center
+
+/*
+COMPONENT Fe_block = Union_box(
+  xwidth=0.03,yheight=0.03,zdepth=0.01,material_string="Fe_alpha",priority=100)
+AT (-0.031,0,0) RELATIVE object_center
+
+COMPONENT Fe_alpha_block = Union_box(
+  xwidth=0.03,yheight=0.03,zdepth=0.01,material_string="cementite",priority=101)
+AT (0,0,0) RELATIVE object_center
+
+COMPONENT cementite_block = Union_box(
+  xwidth=0.03,yheight=0.03,zdepth=0.01,material_string="iron_mix",priority=102)
+AT (0.031,0,0) RELATIVE object_center
+*/
+
+
+
+COMPONENT blade_iron_side_1 = Union_box(
+  xwidth=0.12,yheight=sword_height,zdepth=sword_depth*2.0,material_string="Fe_alpha",priority=100)
+AT (0.061,0,0) RELATIVE object_center
+
+COMPONENT blade_mask_1 = Union_cylinder(
+  radius=blade_mask_radius,
+  yheight=sword_height+0.10001,
+  mask_string="blade_iron_side_1",priority=0,
+  mask_setting="All")
+AT (blade_start_width*0.5,0,blade_mask_radius-sword_depth*0.5) RELATIVE object_center
+ROTATED (width_angle,0,blade_angle_deg) RELATIVE object_center
+
+COMPONENT blade_mask_2 = Union_cylinder(
+  radius=blade_mask_radius,
+  yheight=sword_height+0.10002,
+  mask_string="blade_iron_side_1",priority=0,
+  mask_setting="All")
+AT (blade_start_width*0.5,0,-blade_mask_radius+sword_depth*0.5) RELATIVE object_center
+ROTATED (-width_angle,0,blade_angle_deg) RELATIVE object_center
+
+COMPONENT blade_iron_side_2 = Union_box(
+  xwidth=0.12,yheight=sword_height,zdepth=sword_depth*2.0,material_string="Fe_alpha",priority=101)
+AT (-0.061,0,0) RELATIVE object_center
+
+COMPONENT blade_mask_3 = Union_cylinder(
+  radius=blade_mask_radius,
+  yheight=sword_height+0.10003,
+  mask_string="blade_iron_side_2",priority=0,
+  mask_setting="All")
+AT (-blade_start_width*0.5,0,blade_mask_radius-sword_depth*0.5) RELATIVE object_center
+ROTATED (width_angle,0,-blade_angle_deg) RELATIVE object_center
+
+COMPONENT blade_mask_4 = Union_cylinder(
+  radius=blade_mask_radius,
+  yheight=sword_height+0.10004,
+  mask_string="blade_iron_side_2",priority=0,
+  mask_setting="All")
+AT (-blade_start_width*0.5,0,-blade_mask_radius+sword_depth*0.5) RELATIVE object_center
+ROTATED (-width_angle,0,-blade_angle_deg) RELATIVE object_center
+
+COMPONENT rust_core = Union_box(
+  xwidth=core_side_bottom_length,xwidth2=core_side_top_length,
+  yheight=core_side_bottom_length,yheight2=core_side_top_length,
+  zdepth=sword_height-0.0001,
+  material_string="Fe3O4",priority=102)
+AT (0,0,0) RELATIVE object_center
+ROTATED (-90,0,45) RELATIVE object_center
+
+COMPONENT hard_core = Union_box(
+  xwidth=core_side_bottom_length-rust_thickness*2.0,xwidth2=core_side_top_length-rust_thickness*2.0,
+  yheight=core_side_bottom_length-rust_thickness*2.0,yheight2=core_side_top_length-rust_thickness*2.0,
+  zdepth=sword_height-0.0002,
+  material_string="iron_mix",priority=103)
+  //material_string="Fe_alpha",priority=103)
+AT (0,0,0) RELATIVE object_center
+ROTATED (-90,0,45) RELATIVE object_center
+
+COMPONENT side_cut_1 = Union_cylinder(
+  radius=cut_radius,
+  yheight=sword_height+2*tip_height+0.01,
+  material_string="Vacuum",priority=1000)
+AT (0,0,cut_radius+sword_depth*0.5-cut_depth) RELATIVE object_center
+ROTATED (-width_angle,0,0) RELATIVE object_center
+
+COMPONENT side_cut_2 = Union_cylinder(
+  radius=cut_radius,
+  yheight=sword_height+2*tip_height+0.01,
+  material_string="Vacuum",priority=1001)
+AT (0,0,-cut_radius-sword_depth*0.5+cut_depth) RELATIVE object_center
+ROTATED (width_angle,0,0) RELATIVE object_center
+
+
+/*
+// Round top, not working well.
+COMPONENT blade_iron_tip = Union_box(
+  xwidth=0.12,yheight=0.12,zdepth=sword_depth*1.9,material_string="Fe_alpha",priority=301)
+AT (0,0.5*sword_height+0.059,0) RELATIVE object_center
+
+COMPONENT top_blade_mask_1 = Union_sphere(
+  radius=blade_tip_mask_radius,
+  mask_string="blade_iron_tip",priority=0,
+  mask_setting="All")
+AT (0,-0.5*0.12,blade_tip_mask_radius-sword_depth*0.5) RELATIVE blade_iron_tip
+
+COMPONENT top_blade_mask_2 = Union_sphere(
+  radius=blade_tip_mask_radius,
+  mask_string="blade_iron_tip",priority=0,
+  mask_setting="All")
+AT (0,-0.5*0.12,-blade_tip_mask_radius+sword_depth*0.5) RELATIVE blade_iron_tip
+*/
+
+// Tip of the sword
+COMPONENT blade_iron_side_tip_1 = Union_box(
+  xwidth=0.12-0.0002,yheight=tip_height,zdepth=sword_depth*2.0-0.001,material_string="Fe_alpha",priority=300)
+AT (0.06,sword_height*0.5+tip_height*0.5-0.0001,0) RELATIVE object_center
+
+COMPONENT blade_mask_tip_1 = Union_cylinder(
+  radius=blade_tip_mask_radius,
+  yheight=tip_height+0.10001,
+  mask_string="blade_iron_side_tip_1",priority=0,
+  mask_setting="All")
+AT (blade_top_width*0.5*tip_x_multiplier,sword_height*0.5+tip_height*0.5-0.0001,blade_mask_radius-sword_depth*0.5*0.8) RELATIVE object_center
+ROTATED (2.5*width_angle,0,blade_angle_tip_deg) RELATIVE object_center
+
+COMPONENT blade_mask_tip_2 = Union_cylinder(
+  radius=blade_tip_mask_radius,
+  yheight=tip_height+0.10002,
+  mask_string="blade_iron_side_tip_1",priority=0,
+  mask_setting="All")
+AT (blade_top_width*0.5*tip_x_multiplier,sword_height*0.5+tip_height*0.5-0.0001,-blade_mask_radius+sword_depth*0.5*0.8) RELATIVE object_center
+ROTATED (-2.5*width_angle,0,blade_angle_tip_deg) RELATIVE object_center
+
+COMPONENT blade_iron_side_tip_2 = Union_box(
+  xwidth=0.12-0.0002,yheight=tip_height,zdepth=sword_depth*2.0-0.001,material_string="Fe_alpha",priority=301)
+AT (-0.06,sword_height*0.5+tip_height*0.5-0.0001,0) RELATIVE object_center
+
+COMPONENT blade_mask_tip_3 = Union_cylinder(
+  radius=blade_tip_mask_radius,
+  yheight=tip_height+0.10003,
+  mask_string="blade_iron_side_tip_2",priority=0,
+  mask_setting="All")
+AT (-blade_top_width*0.5*tip_x_multiplier,sword_height*0.5+tip_height*0.5-0.0001,blade_mask_radius-sword_depth*0.5*0.8) RELATIVE object_center
+ROTATED (2.5*width_angle,0,-blade_angle_tip_deg) RELATIVE object_center
+
+COMPONENT blade_mask_tip_4 = Union_cylinder(
+  radius=blade_tip_mask_radius,
+  yheight=tip_height+0.10004,
+  mask_string="blade_iron_side_tip_2",priority=0,
+  mask_setting="All")
+AT (-blade_top_width*0.5*tip_x_multiplier,sword_height*0.5+tip_height*0.5-0.0001,-blade_mask_radius+sword_depth*0.5*0.8) RELATIVE object_center
+ROTATED (-2.5*width_angle,0,-blade_angle_tip_deg) RELATIVE object_center
+
+COMPONENT rust_core_tip = Union_box(
+  xwidth=core_side_top_length-0.001,xwidth2=2.0*rust_thickness+0.0001,
+  yheight=core_side_top_length-0.001,yheight2=2.0*rust_thickness+0.0001,
+  zdepth=tip_height-0.05,
+  material_string="Fe3O4",priority=302)
+AT (0,sword_height*0.5+(tip_height-0.05)*0.5-0.0003,0) RELATIVE object_center
+ROTATED (-90,0,45) RELATIVE object_center
+
+COMPONENT hard_core_tip = Union_box(
+  xwidth=core_side_top_length-rust_thickness*2.0-0.001,xwidth2=0.0001,
+  yheight=core_side_top_length-rust_thickness*2.0-0.001,yheight2=0.0001,
+  zdepth=tip_height-0.05,
+  material_string="iron_mix",priority=303)
+  //material_string="Fe_alpha",priority=303)
+AT (0,sword_height*0.5+(tip_height-0.05)*0.5-0.0001,0) RELATIVE object_center
+ROTATED (-90,sword_height*0.5-0.0001,45) RELATIVE object_center
+
+
+
+// Handle
+COMPONENT left_blade_guard = Union_box(
+  xwidth=0.03,xwidth2=0.02,
+  yheight=0.045,yheight2=0.02,
+  zdepth=0.09,
+  material_string="Fe_alpha",priority=50)
+AT (0.0451,-sword_height*0.5-0.015,0) RELATIVE object_center
+ROTATED (0,90,0) RELATIVE object_center
+
+COMPONENT right_blade_guard = Union_box(
+  xwidth=0.03,xwidth2=0.02,
+  yheight=0.045,yheight2=0.02,
+  zdepth=0.09,
+  material_string="Fe_alpha",priority=51)
+AT (-0.0451,-sword_height*0.5-0.015,0) RELATIVE object_center
+ROTATED (0,-90,0) RELATIVE object_center
+
+COMPONENT handle = Union_cylinder(
+  radius=0.02,
+  yheight=0.15,
+  material_string="Fe_alpha",priority=52)
+AT (0,-sword_height*0.5-0.03-0.15*0.5,0) RELATIVE object_center
+ROTATED (0,0,0) RELATIVE object_center
+
+COMPONENT handle_end = Union_sphere(
+  radius=0.03,
+  material_string="Fe_alpha",priority=53)
+AT (0,-sword_height*0.5-0.03-0.15,0) RELATIVE object_center
+ROTATED (0,0,0) RELATIVE object_center
+
+
+COMPONENT logger_space_all_zx = Union_logger_2D_space(
+  filename="space_zx.dat",
+  n1=500,D_direction_1="z",D1_min=-0.03,D1_max=0.03,
+  n2=500,D_direction_2="x",D2_min=-0.1,D2_max=0.1)
+AT (0,0,0) RELATIVE object_center
+
+COMPONENT logger_space_all_zy = Union_logger_2D_space(
+  filename="space_zy.dat",
+  n1=300,D_direction_1="z",D1_min=-0.04,D1_max=0.04,
+  n2=300,D_direction_2="y",D2_min=-0.04,D2_max=0.04)
+AT (0,0,0) RELATIVE object_center
+
+COMPONENT logger_space_all_xy = Union_logger_2D_space(
+  filename="space_xy.dat",
+  n1=300,D_direction_1="x",D1_min=-0.06,D1_max=0.06,
+  n2=300,D_direction_2="y",D2_min=-0.04,D2_max=0.04)
+AT (0,0,0) RELATIVE object_center
+
+COMPONENT logger_space_all_slices_zx = Union_logger_3D_space(
+  filename="space_zx_slices.dat",
+  n1=300,D_direction_1="z",D1_min=-0.02,D1_max=0.02,
+  n2=300,D_direction_2="x",D2_min=-0.07,D2_max=0.07,
+  n3=10,D_direction_3="y",D3_min=-0.30,D3_max=0.30)
+AT (0,-0.10,0) RELATIVE object_center
+
+COMPONENT logger_space_all_slices_zx_transfer = Union_logger_3D_space(
+  filename="space_zx_slices_transfer.dat",
+  n1=300,D_direction_1="z",D1_min=-0.02,D1_max=0.02,
+  n2=300,D_direction_2="x",D2_min=-0.07,D2_max=0.07,
+  n3=5,D_direction_3="y",D3_min=-0.02,D3_max=0.02)
+AT (0,sword_height*0.5,0) RELATIVE object_center
+
+COMPONENT logger_space_all_slices_zx_tip = Union_logger_3D_space(
+  filename="space_zx_slices_tip.dat",
+  n1=300,D_direction_1="z",D1_min=-0.02,D1_max=0.02,
+  n2=300,D_direction_2="x",D2_min=-0.07,D2_max=0.07,
+  n3=10,D_direction_3="y",D3_min=-0.05,D3_max=0.21)
+AT (0,sword_height*0.5,0) RELATIVE object_center
+
+
+/*
+COMPONENT back_sphere = Union_sphere(
+  radius=0.04, priority=101, material_string="Fe", visualize=1)
+AT (0,0,0.02) RELATIVE object_center
+ROTATED (0,0,0) RELATIVE object_center
+*/
+
+COMPONENT test_sample = Union_master()
+AT(0,0,0) RELATIVE a1
+ROTATED(0,0,0) RELATIVE a1
+
+COMPONENT screen = PSD_monitor(xwidth=0.3,yheight=1.0,nx=200,ny=200,filename="absoprtion_picture.dat",restore_neutron=1)
+  AT (0,0,10.5) RELATIVE graph
+
+COMPONENT square_screen = PSD_monitor(xwidth=1.0,yheight=1.0,nx=800,ny=200,filename="absoprtion_picture_square.dat",restore_neutron=1)
+  AT (0,0,10.5) RELATIVE graph
+
+/*
+COMPONENT L_monitor_Fe = L_monitor(xwidth=0.03,yheight=0.03,filename="Fe_alpha_L.dat",Lmin=L_min,Lmax=L_max,restore_neutron=1,nL=500)
+AT (-0.03,0,0.1) RELATIVE screen
+
+COMPONENT L_monitor_Fe_alpha = L_monitor(xwidth=0.03,yheight=0.03,filename="cementite_L.dat",Lmin=L_min,Lmax=L_max,restore_neutron=1,nL=500)
+AT (0,0,0.1) RELATIVE screen
+
+COMPONENT L_monitor_cementite = L_monitor(xwidth=0.03,yheight=0.03,filename="Iron_mix_L.dat",Lmin=L_min,Lmax=L_max,restore_neutron=1,nL=500)
+AT (0.03,0,0.1) RELATIVE screen
+*/
+
+
+
+END
+

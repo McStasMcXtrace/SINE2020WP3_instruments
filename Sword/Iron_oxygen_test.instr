@@ -1,0 +1,186 @@
+/*******************************************************************************
+*
+* McStas, neutron ray-tracing package
+*         Copyright (C) 1997-2008, All rights reserved
+*         Risoe National Laboratory, Roskilde, Denmark
+*         Institut Laue Langevin, Grenoble, France
+*
+* Instrument: test
+*
+* %Identification
+* Written by: Mads Bertelsen
+* Date: September 2015
+* Origin: University of Copenhagen
+* Version: $Revision: 0.1 $
+*
+* Simple test instrument for sample component.
+*
+* %Description
+* simple test instrument for sample component.
+*
+* %End
+*******************************************************************************/
+
+DEFINE INSTRUMENT test(L_min=0.5,L_max=5.0,mixture=0.1,angle=0)
+
+DECLARE
+%{
+%}
+
+TRACE
+
+COMPONENT a1 = Progress_bar()
+  AT (0,0,0) ABSOLUTE
+
+COMPONENT source = Source_div(
+//        xwidth=0.0005, yheight=0.0005,focus_aw=15, focus_ah=15,
+        xwidth=0.1, yheight=0.04,focus_aw=0.1, focus_ah=0.1, gauss=0,
+        lambda0 = (L_min+L_max)*0.5,
+        dlambda = 0.5*(L_max-L_min))
+AT (0,0,0) RELATIVE a1
+ROTATED (0,0,0) RELATIVE a1
+
+COMPONENT pre_sample_slit = Slit(xwidth=0.3,yheight=0.3)
+AT (0,0,9) RELATIVE a1
+ROTATED (0,0,0) RELATIVE a1
+
+COMPONENT graph = Arm()
+AT (0,0,0) RELATIVE a1
+ROTATED (0,0,0) RELATIVE a1
+
+COMPONENT Al_incoherent = Incoherent_process(
+  sigma=4*0.0082,packing_factor=1,unit_cell_volume=66.4)
+AT (0,0,0) ABSOLUTE
+
+// P1
+COMPONENT Al_powder = Powder_process(reflections="Al.laz")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Al = Union_make_material(
+  my_absorption=100*4*0.231/66.4,process_string="Al_incoherent,Al_powder")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Fe_incoherent = Incoherent_process(sigma=2*0.4,packing_factor=1,unit_cell_volume=24.04)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Fe_powder = Powder_process(reflections="Fe.laz")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Fe = Union_make_material(my_absorption=100*2*2.56/24.04)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Fe_alpha_incoherent = Incoherent_process(sigma=0.80000,packing_factor=1,unit_cell_volume=23.55352)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Fe_alpha_powder = Powder_process(reflections="alpha_Fe.laz")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Fe_alpha = Union_make_material(my_absorption=100*5.12000/23.55352)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT cementite_incoherent = Incoherent_process(sigma=4.80398,packing_factor=1,unit_cell_volume=155.15118)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT cementite_powder = Powder_process(reflections="cementite_300K.laz")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT cementite = Union_make_material(my_absorption=100*30.73400/155.15118)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT mix_Fe_alpha_incoherent = Incoherent_process(sigma=0.80000,packing_factor=1,unit_cell_volume=23.55352,packing_factor=1.0-mixture)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT mix_cementite_incoherent = Incoherent_process(sigma=4.80398,packing_factor=1,unit_cell_volume=155.15118,packing_factor=mixture)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT mix_Fe_alpha_powder = Powder_process(reflections="alpha_Fe.laz",packing_factor=1.0-mixture)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT mix_cementite_powder = Powder_process(reflections="cementite_300K.laz",packing_factor=mixture)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT iron_mix = Union_make_material(my_absorption=mixture*100*30.73400/155.15118+(1.0-mixture)*100*5.12000/23.55352)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Fe3O4_incoherent = Incoherent_process(
+  sigma=2.40639,packing_factor=1,unit_cell_volume=157.15089)
+AT (0,0,0) ABSOLUTE
+
+// P1
+COMPONENT Fe3O4_powder = Powder_process(reflections="Fe3O4_mp-19306_computed.laz")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Fe3O4 = Union_make_material(
+  my_absorption=100*15.36152/157.15089,process_string="Fe3O4_incoherent,Fe3O4_powder")
+AT (0,0,0) ABSOLUTE
+
+
+
+
+COMPONENT Turn_table_center = Arm()
+AT (0,0,9.5) RELATIVE graph
+ROTATED (0,angle,0) RELATIVE graph
+
+COMPONENT object_center = Arm()
+AT (0,0,0) RELATIVE Turn_table_center
+ROTATED (0,0,0) RELATIVE Turn_table_center
+
+
+COMPONENT Fe_block = Union_box(
+  xwidth=0.03,yheight=0.03,zdepth=0.01,material_string="Fe_alpha",priority=100)
+AT (-0.031,0,0) RELATIVE object_center
+
+COMPONENT Fe_alpha_block = Union_box(
+  xwidth=0.03,yheight=0.03,zdepth=0.01,material_string="cementite",priority=101)
+AT (0,0,0) RELATIVE object_center
+
+COMPONENT cementite_block = Union_box(
+  xwidth=0.03,yheight=0.03,zdepth=0.01,material_string="Fe3O4",priority=102)
+AT (0.031,0,0) RELATIVE object_center
+
+
+COMPONENT logger_space_all_zx = Union_logger_2D_space(
+  filename="space_zx.dat",
+  n1=150,D_direction_1="z",D1_min=-0.04,D1_max=0.04,
+  n2=150,D_direction_2="x",D2_min=-0.05,D2_max=0.05)
+AT (0,0,0) RELATIVE object_center
+
+COMPONENT logger_space_all_zy = Union_logger_2D_space(
+  filename="space_zy.dat",
+  n1=150,D_direction_1="z",D1_min=-0.04,D1_max=0.04,
+  n2=150,D_direction_2="y",D2_min=-0.04,D2_max=0.04)
+AT (0,0,0) RELATIVE object_center
+
+COMPONENT logger_space_all_xy = Union_logger_2D_space(
+  filename="space_xy.dat",
+  n1=150,D_direction_1="x",D1_min=-0.05,D1_max=0.05,
+  n2=150,D_direction_2="y",D2_min=-0.04,D2_max=0.04)
+AT (0,0,0) RELATIVE object_center
+
+/*
+COMPONENT back_sphere = Union_sphere(
+  radius=0.04, priority=101, material_string="Fe", visualize=1)
+AT (0,0,0.02) RELATIVE object_center
+ROTATED (0,0,0) RELATIVE object_center
+*/
+
+COMPONENT test_sample = Union_master()
+AT(0,0,0) RELATIVE a1
+ROTATED(0,0,0) RELATIVE a1
+
+COMPONENT screen = PSD_monitor(xwidth=0.3,yheight=0.3,nx=200,ny=200,filename="absoprtion_picture.dat",restore_neutron=1)
+  AT (0,0,10) RELATIVE graph
+
+COMPONENT L_monitor_Fe = L_monitor(xwidth=0.03,yheight=0.03,filename="Fe_alpha_L.dat",Lmin=L_min,Lmax=L_max,restore_neutron=1,nL=500)
+AT (-0.03,0,0.1) RELATIVE screen
+
+COMPONENT L_monitor_cementite = L_monitor(xwidth=0.03,yheight=0.03,filename="cementite_L.dat",Lmin=L_min,Lmax=L_max,restore_neutron=1,nL=500)
+AT (0,0,0.1) RELATIVE screen
+
+COMPONENT L_monitor_Fe3O4 = L_monitor(xwidth=0.03,yheight=0.03,filename="Fe3O4_L.dat",Lmin=L_min,Lmax=L_max,restore_neutron=1,nL=500)
+AT (0.03,0,0.1) RELATIVE screen
+
+
+
+END
+
