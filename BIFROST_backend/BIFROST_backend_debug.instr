@@ -1,0 +1,592 @@
+/*******************************************************************************
+*
+* McStas, neutron ray-tracing package
+*         Copyright (C) 1997-2008, All rights reserved
+*         Risoe National Laboratory, Roskilde, Denmark
+*         Institut Laue Langevin, Grenoble, France
+*
+* Instrument: test
+*
+* %Identification
+* Written by: Mads Bertelsen
+* Date: September 2015
+* Origin: University of Copenhagen
+* Version: $Revision: 0.1 $
+*
+* Simple test instrument for sample component.
+*
+* %Description
+* simple test instrument for sample component.
+*
+* Example: filename="source_sct091_tu_02_1.dat" Detector: det_I=9.89304e+09
+*
+* %End
+*******************************************************************************/
+
+DEFINE INSTRUMENT test(
+//tag_time=4.2E-3,
+//dtag_time=0.04E-3,
+//tag_angle=78,
+//int level=10,
+//stick_displacement=0,
+backend_height_offset=0,
+A4=45)
+
+DECLARE
+%{
+int sample_1_index=27,sample_2_index=30,sample_3_index=36; // Indexes of three samples
+int scattered_1,scattered_2,scattered_3;
+int logic_level[10];
+int iterate,flag1;
+int n_scattering_events;
+
+
+double step_1_height;
+double step_2_height;
+double step_3_height;
+double step_4_height;
+double top_step;
+double top_tank_height;
+
+double lower_tank_top_offset;
+double Filter_Be_outer_radius,Filter_Be_thickness;
+double Filter_Collimator_outer_radius,Filter_Collimator_length;
+double Filter_collimation_angular_sep;
+int number_of_blades;
+int Colimator_blade_activation[300];
+%}
+
+INITIALIZE
+%{
+  
+top_step = 0.2;
+step_1_height = 0.08;
+step_2_height = step_1_height + 0.08;
+step_3_height = step_2_height + 0.12;
+step_4_height = step_3_height + 0.18;
+lower_tank_top_offset = -0.1;
+top_tank_height = 0.24;
+
+Filter_Be_outer_radius = 0.87;
+Filter_Be_thickness = 0.25;
+Filter_Collimator_outer_radius = 0.88;
+Filter_Collimator_length = 0.35;
+Filter_collimation_angular_sep = 0.65;
+//Filter_collimation_angular_sep = 5;
+
+number_of_blades = round(90.0/Filter_collimation_angular_sep + 1);
+
+for (iterate=0;iterate<number_of_blades;iterate++)
+  Colimator_blade_activation[iterate] = 1;
+  
+for (iterate=number_of_blades;iterate<299;iterate++)
+  Colimator_blade_activation[iterate] = 0;
+  
+for (iterate=0;iterate<10;iterate++)
+  logic_level[iterate] = 1;
+
+%}
+
+TRACE
+
+// P0
+COMPONENT Al_incoherent = Incoherent_process(sigma=4*0.0082,packing_factor=1,unit_cell_volume=66.4) //,interact_fraction=0.8)
+AT (0,0,0) ABSOLUTE
+
+// P1
+COMPONENT Al_powder = Powder_process(reflections="Al.laz")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Al = Union_make_material(my_absorption=100*4*0.231/66.4,process_string="Al_incoherent,Al_powder")
+AT (0,0,0) ABSOLUTE
+
+
+COMPONENT Be_incoherent = Incoherent_process(sigma=2*0.0018,packing_factor=1,unit_cell_volume=16.22) //,interact_fraction=0.8)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Be_powder = Powder_process(reflections="Be.laz")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Be = Union_make_material(my_absorption=100*2*0.0076/16.22,process_string="Be_incoherent,Be_powder")
+AT (0,0,0) ABSOLUTE
+
+
+COMPONENT Cd_incoherent = Incoherent_process(sigma=2*3.46,packing_factor=1,unit_cell_volume=43.11) //,interact_fraction=0.8)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Cd_powder = Powder_process(reflections="Cd.laz")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Cd = Union_make_material(my_absorption=100*2*2520/43.11,process_string="Cd_incoherent,Cd_powder")
+AT (0,0,0) ABSOLUTE
+
+
+// P0
+COMPONENT Na2Ca3Al2F14_incoherent = Incoherent_process(sigma=4*3.4176,packing_factor=1,unit_cell_volume=1079.1)
+AT (0,0,0) ABSOLUTE
+
+// P1
+COMPONENT Na2Ca3Al2F14_powder = Powder_process(reflections="Na2Ca3Al2F14.laz")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Na2Ca3Al2F14 = Union_make_material(my_absorption=100*4*2.9464/1079.1)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Vanadium_incoherent = Incoherent_process(sigma=2*4.935,packing_factor=1,unit_cell_volume=27.66)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Vanadium_powder = Powder_process(reflections="V.laz")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Vanadium = Union_make_material(my_absorption=5.08*2/27.66,process_string="Vanadium_incoherent,Vanadium_powder")
+AT (0,0,0) ABSOLUTE
+
+
+COMPONENT a1 = Progress_bar()
+  AT (0,0,0) ABSOLUTE
+
+// Source for transmission picture
+//COMPONENT source = Source_div(
+//        xwidth=0.12, yheight=0.12,focus_aw=0.5, focus_ah=0.5,
+//        E0 = 50,
+//        dE = 0, flux = 1E9)
+//  AT (0,-0.02,0) RELATIVE a1 ROTATED (0,0,0) RELATIVE a1
+
+COMPONENT source = Source_div(
+        xwidth=0.01, yheight=0.01,focus_aw=0.05, focus_ah=0.05,
+        E0 = 5,
+        dE = 1, flux = 1E9)
+  AT (0,0,0) RELATIVE a1 ROTATED (0,0,0) RELATIVE a1
+
+
+// Sample position
+COMPONENT target = Arm()
+AT (0,0,3) RELATIVE a1
+ROTATED (0,0,0) RELATIVE a1
+
+COMPONENT beam_center = Arm()
+AT (0,0,0) RELATIVE target
+ROTATED (0,0,0) RELATIVE target
+
+COMPONENT drum_center = Arm()
+AT (0,0.603,0) RELATIVE beam_center
+ROTATED (0,0,0) RELATIVE beam_center
+
+// Sample position
+COMPONENT beam_center_arm = Arm()
+AT (0,0.3,0.0) RELATIVE target
+ROTATED (180,50,0) RELATIVE target
+
+
+COMPONENT sample = Union_cylinder(radius=0.02,yheight=0.03, priority=1020,material_string="Vanadium", number_of_activations=logic_level[0])
+AT (0,0.01,0) RELATIVE beam_center
+ROTATED (0,0,0) RELATIVE beam_center
+
+/*
+COMPONENT sample_holder = Union_cylinder(radius=0.005,yheight=0.09,priority=1019,material_string="Al",number_of_activations=logic_level[1])
+AT (0,0.012+0.09*0.5,0) RELATIVE beam_center
+ROTATED (0,0,0) RELATIVE beam_center
+*/
+
+
+COMPONENT sample_rod_bottom_arm = Arm()
+AT (0,0.1,0) RELATIVE target
+ROTATED (0,85,0) RELATIVE target
+/*
+//V20
+COMPONENT sample_rod = Union_cylinder(radius=0.0075,yheight=1,priority=925,material_string="Al",number_of_activations=logic_level[5])
+AT (0,0.5,0) RELATIVE sample_rod_bottom_arm
+ROTATED (0,0,0) RELATIVE sample_rod_bottom_arm
+
+//V21
+COMPONENT sample_rod_collar_1 = Union_cylinder(radius=0.034,yheight=0.02,priority=917,material_string="Al",number_of_activations=logic_level[5])
+AT (0,0.048,0) RELATIVE sample_rod_bottom_arm
+ROTATED (0,0,0) RELATIVE sample_rod_bottom_arm
+
+//V22
+COMPONENT sample_rod_collar_2 = Union_cylinder(radius=0.034,yheight=0.02,priority=918,material_string="Al",number_of_activations=logic_level[5])
+AT (0,0.14,0) RELATIVE sample_rod_bottom_arm
+ROTATED (0,0,0) RELATIVE sample_rod_bottom_arm
+
+//V23
+COMPONENT sample_rod_collar_3 = Union_cylinder(radius=0.034,yheight=0.02,priority=919,material_string="Al",number_of_activations=logic_level[5])
+AT (0,0.34,0) RELATIVE sample_rod_bottom_arm
+ROTATED (0,0,0) RELATIVE sample_rod_bottom_arm
+
+//V24
+COMPONENT sample_rod_collar_4 = Union_cylinder(radius=0.034,yheight=0.02,priority=920,material_string="Al",number_of_activations=logic_level[5])
+AT (0,0.635,0) RELATIVE sample_rod_bottom_arm
+ROTATED (0,0,0) RELATIVE sample_rod_bottom_arm
+
+//V25
+COMPONENT sample_rod_collar_1_vacuum = Union_cylinder(radius=0.03,yheight=0.016,priority=921,material_string="Vacuum",number_of_activations=logic_level[5])
+AT (0,0.048-0.005,0) RELATIVE sample_rod_bottom_arm
+ROTATED (0,0,0) RELATIVE sample_rod_bottom_arm
+
+//V26
+COMPONENT sample_rod_collar_2_vacuum = Union_cylinder(radius=0.03,yheight=0.016,priority=922,material_string="Vacuum",number_of_activations=logic_level[5])
+AT (0,0.14-0.005,0) RELATIVE sample_rod_bottom_arm
+ROTATED (0,0,0) RELATIVE sample_rod_bottom_arm
+
+//V27
+COMPONENT sample_rod_collar_3_vacuum = Union_cylinder(radius=0.03,yheight=0.016,priority=923,material_string="Vacuum",number_of_activations=logic_level[5])
+AT (0,0.34-0.005,0) RELATIVE sample_rod_bottom_arm
+ROTATED (0,0,0) RELATIVE sample_rod_bottom_arm
+
+//V28
+COMPONENT sample_rod_collar_4_vacuum = Union_cylinder(radius=0.03,yheight=0.016,priority=924,material_string="Vacuum",number_of_activations=logic_level[5])
+AT (0,0.635-0.005,0) RELATIVE sample_rod_bottom_arm
+ROTATED (0,0,0) RELATIVE sample_rod_bottom_arm
+*/
+
+
+
+//V29
+COMPONENT inner_cryostat_wall = Union_cylinder(radius=0.052,yheight=0.17,priority=912,material_string="Al",p_interact=0.20,number_of_activations=logic_level[6])
+AT (0,0.01,0) RELATIVE beam_center
+ROTATED (0,0,0) RELATIVE beam_center
+
+//V30
+COMPONENT inner_cryostat_vacuum = Union_cylinder(radius=0.05,yheight=0.16,priority=913,material_string="Vacuum",number_of_activations=logic_level[6])
+AT (0,0.01,0) RELATIVE beam_center
+ROTATED (0,0,0) RELATIVE beam_center
+
+
+/*
+//V31
+COMPONENT sample_stick_walls = Union_cylinder(radius=0.04,yheight=0.935,priority=914,material_string="Al",number_of_activations=logic_level[6])
+AT (0,0.555+0.001,0) RELATIVE beam_center
+ROTATED (0,0,0) RELATIVE beam_center
+
+//V32
+COMPONENT sample_stick_vacuum = Union_cylinder(radius=0.036,yheight=0.96,priority=915,material_string="Vacuum",number_of_activations=logic_level[6])
+AT (0,0.55,0) RELATIVE beam_center
+ROTATED (0,0,0) RELATIVE beam_center
+
+
+//V33
+COMPONENT cryostat_mountin_plate = Union_cylinder(radius=0.215,yheight=0.01,priority=907,material_string="Al",number_of_activations=logic_level[7])
+AT (0,-0.147,0) RELATIVE beam_center
+ROTATED (0,0,0) RELATIVE beam_center
+
+
+//V34
+COMPONENT cryostat_drum_walls = Union_cylinder(radius=0.1975,yheight=0.800,priority=908,material_string="Al",number_of_activations=logic_level[7])
+AT (0,0,0) RELATIVE drum_center
+ROTATED (0,0,0) RELATIVE drum_center
+
+//V35
+COMPONENT cryostat_drum_vacuum = Union_cylinder(radius=0.19,yheight=0.790,priority=909,material_string="Vacuum",number_of_activations=logic_level[7])
+AT (0,0,0) RELATIVE drum_center
+ROTATED (0,0,0) RELATIVE drum_center
+
+//V36
+COMPONENT outer_cryostat_wall = Union_cylinder(radius=0.180,yheight=0.355,priority=910,material_string="Al",p_interact=0.20,number_of_activations=logic_level[7])
+AT (0,0.032,0) RELATIVE beam_center
+ROTATED (0,0,0) RELATIVE beam_center
+
+//V37
+COMPONENT outer_cryostat_vacuum = Union_cylinder(radius=0.178,yheight=0.355,priority=911,material_string="Vacuum",number_of_activations=logic_level[7])
+AT (0,0.037,0) RELATIVE beam_center
+ROTATED (0,0,0) RELATIVE beam_center
+*/
+
+
+/*
+COMPONENT logger_time_all = Union_logger_1D(filename="scattering_time.dat",n1=600,min_value=2.85E-3,max_value=6E-3)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT logger_time_al = Union_logger_1D(
+target_geometry="Al_ring1,Al_ring2,Al_ring3,Al_ring4,al_in_box_cut,sample_holder_under_sample,sample_holder_long_piece,bottom_horizontal_piece,bottom_vertical_piece,cylinder_holder,screw_head,cylinder_holder_base,cylinder_holder_base,sample_rod,sample_rod_collar_1,sample_rod_collar_2,sample_rod_collar_3,sample_rod_collar_4,inner_cryostat_wall,sample_stick_walls,cryostat_mountin_plate,cryostat_drum_walls,outer_cryostat_wall",
+    filename="scattering_time_al.dat",n1=600,min_value=2.85E-3,max_value=6E-3)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT logger_Q_all = Union_logger_2DQ(filename="2DQ_all_conditional.dat",n1=150,n2=150,Q_direction_1="z",Q_direction_2="x")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT logger_Q_all_1 = Union_logger_2DQ(filename="2DQ_all_conditional_1.dat",order_total=1,n1=150,n2=150,Q_direction_1="z",Q_direction_2="x")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT logger_Q_all_2 = Union_logger_2DQ(filename="2DQ_all_conditional_2.dat",order_total=2,n1=150,n2=150,Q_direction_1="z",Q_direction_2="x")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT logger_Q_all_3 = Union_logger_2DQ(filename="2DQ_all_conditional_3.dat",order_total=3,n1=150,n2=150,Q_direction_1="z",Q_direction_2="x")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT logger_space_all = Union_logger_2D_space(filename="space_horizontal.dat",n1=150,n2=150,D_direction_1="z",D_direction_2="x",D1_min=-0.25,D1_max=0.25,D2_min=-0.25,D2_max=0.25,logger_conditional_extend_index=1)
+AT (0,0,0) RELATIVE target
+
+COMPONENT logger_space_1 = Union_logger_2D_space(filename="space_horizontal_1.dat",n1=150,n2=150,D_direction_1="z",D_direction_2="x",D1_min=-0.25,D1_max=0.25,D2_min=-0.25,D2_max=0.25,order_total=1)
+AT (0,0,0) RELATIVE target
+
+COMPONENT logger_space_2 = Union_logger_2D_space(filename="space_horizontal_2.dat",n1=150,n2=150,D_direction_1="z",D_direction_2="x",D1_min=-0.25,D1_max=0.25,D2_min=-0.25,D2_max=0.25,order_total=2)
+AT (0,0,0) RELATIVE target
+
+COMPONENT logger_space_3 = Union_logger_2D_space(filename="space_horizontal_3.dat",n1=150,n2=150,D_direction_1="z",D_direction_2="x",D1_min=-0.25,D1_max=0.25,D2_min=-0.25,D2_max=0.25,order_total=3)
+AT (0,0,0) RELATIVE target
+
+// Loggers for spotting certain spot
+COMPONENT logger_time_all_conditional = Union_logger_1D(filename="scattering_time_conditional.dat",n1=600,min_value=2.85E-3,max_value=6E-3)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT logger_Q_all_con = Union_logger_2DQ(filename="2DQ_all_conditional_con.dat",n1=150,n2=150,Q_direction_1="z",Q_direction_2="x")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT logger_Q_all_1_con = Union_logger_2DQ(filename="2DQ_all_conditional_1_con.dat",order_total=1,n1=150,n2=150,Q_direction_1="z",Q_direction_2="x")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT logger_Q_all_2_con = Union_logger_2DQ(filename="2DQ_all_conditional_2_con.dat",order_total=2,n1=150,n2=150,Q_direction_1="z",Q_direction_2="x")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT logger_Q_all_3_con = Union_logger_2DQ(filename="2DQ_all_conditional_3_con.dat",order_total=3,n1=150,n2=150,Q_direction_1="z",Q_direction_2="x")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT logger_space_h_all_con = Union_logger_2D_space(filename="space_test_horizontal_con.dat",n1=150,n2=150,D_direction_1="z",D_direction_2="x",D1_min=-0.25,D1_max=0.25,D2_min=-0.25,D2_max=0.25,logger_conditional_extend_index=1)
+AT (0,0,0) RELATIVE target
+
+COMPONENT logger_space_h_1_con = Union_logger_2D_space(filename="space_horizontal_1_con.dat",n1=150,n2=150,D_direction_1="z",D_direction_2="x",D1_min=-0.25,D1_max=0.25,D2_min=-0.25,D2_max=0.25,order_total=1)
+AT (0,0,0) RELATIVE target
+
+COMPONENT logger_space_h_2_con = Union_logger_2D_space(filename="space_horizontal_2_con.dat",n1=150,n2=150,D_direction_1="z",D_direction_2="x",D1_min=-0.25,D1_max=0.25,D2_min=-0.25,D2_max=0.25,order_total=2)
+AT (0,0,0) RELATIVE target
+
+COMPONENT logger_space_h_3_con = Union_logger_2D_space(filename="space_horizontal_3_con.dat",n1=150,n2=150,D_direction_1="z",D_direction_2="x",D1_min=-0.25,D1_max=0.25,D2_min=-0.25,D2_max=0.25,order_total=3)
+AT (0,0,0) RELATIVE target
+
+COMPONENT logger_space_v_all_con = Union_logger_2D_space(filename="space_test_vertical_con.dat",n1=150,n2=300,D_direction_1="z",D_direction_2="y",D1_min=-0.25,D1_max=0.25,D2_min=-0.25,D2_max=0.50,logger_conditional_extend_index=1)
+AT (0,0,0) RELATIVE target
+
+COMPONENT logger_space_v_1_con = Union_logger_2D_space(filename="space_vertical_1_con.dat",n1=150,n2=300,D_direction_1="z",D_direction_2="y",D1_min=-0.25,D1_max=0.25,D2_min=-0.25,D2_max=0.50,order_total=1)
+AT (0,0,0) RELATIVE target
+
+COMPONENT logger_space_v_2_con = Union_logger_2D_space(filename="space_vertical_2_con.dat",n1=150,n2=300,D_direction_1="z",D_direction_2="y",D1_min=-0.25,D1_max=0.25,D2_min=-0.25,D2_max=0.50,order_total=2)
+AT (0,0,0) RELATIVE target
+
+COMPONENT logger_space_v_3_con = Union_logger_2D_space(filename="space_vertical_3_con.dat",n1=150,n2=300,D_direction_1="z",D_direction_2="y",D1_min=-0.25,D1_max=0.25,D2_min=-0.25,D2_max=0.50,order_total=3)
+AT (0,0,0) RELATIVE target
+
+
+COMPONENT PSD_direction = Arm()
+AT (0,0,0) RELATIVE target
+ROTATED (0,tag_angle,0) RELATIVE target
+
+
+COMPONENT space_all_PSD_conditional = Union_conditional_PSD(target_loggers="logger_time_all_conditional,logger_space_h_all_con,logger_space_h_1_con,logger_space_h_2_con,logger_space_h_3_con,logger_space_v_all_con,logger_space_v_1_con,logger_space_v_2_con,logger_space_v_3_con,logger_Q_all_con,logger_Q_all_1_con,logger_Q_all_2_con,logger_Q_all_3_con",xwidth=0.1,yheight=0.2,time_min=tag_time-dtag_time,time_max=tag_time+dtag_time,master_tagging=1)
+AT (0,0,0.5) RELATIVE PSD_direction
+*/
+
+
+COMPONENT sample_position = Arm()
+AT (0,0.0,0.0) RELATIVE target
+ROTATED (0,0,0) RELATIVE target
+
+COMPONENT backend_center_direction = Arm()
+AT (0,backend_height_offset,0.0) RELATIVE target // changed elavation slightly to check for a bug
+ROTATED (0,A4,0) RELATIVE target
+
+
+
+COMPONENT outer_tank = Union_cylinder(radius=2.2,yheight=1.3,priority=200,material_string="Al")
+AT (0,-1.3*0.5+lower_tank_top_offset,0) RELATIVE backend_center_direction
+ROTATED (0,0,0) RELATIVE backend_center_direction
+/*
+COMPONENT outer_tank_vac = Union_cylinder(radius=2.2-0.01,yheight=1.3-0.02,priority=201,material_string="Vacuum")
+AT (0,-1.3*0.5-0.1,0) RELATIVE backend_center_direction
+ROTATED (0,0,0) RELATIVE backend_center_direction
+
+// Higher priority for lower steps
+COMPONENT tank_1stp = Union_cylinder(radius=2.2-0.32*1,yheight=step_1_height,priority=205,material_string="Al")
+AT (0,-1.3*0.5+step_1_height*0.5+0.001,0) RELATIVE outer_tank
+ROTATED (0,0,0) RELATIVE outer_tank
+
+COMPONENT tank_vac_1stp = Union_cylinder(radius=2.2-0.32*1-0.02,yheight=step_1_height,priority=209,material_string="Vacuum")
+AT (0,-1.3*0.5+step_1_height*0.5+0.001-0.0101,0) RELATIVE outer_tank
+ROTATED (0,0,0) RELATIVE outer_tank
+
+COMPONENT tank_2stp = Union_cylinder(radius=2.2-0.32*2,yheight=step_2_height,priority=204,material_string="Al")
+AT (0,-1.3*0.5+step_2_height*0.5+0.001,0) RELATIVE outer_tank
+ROTATED (0,0,0) RELATIVE outer_tank
+
+COMPONENT tank_vac_2stp = Union_cylinder(radius=2.2-0.32*2-0.02,yheight=step_2_height+0.04,priority=208,material_string="Vacuum")
+AT (0,-1.3*0.5+step_2_height*0.5+0.001-0.0202,0) RELATIVE outer_tank
+ROTATED (0,0,0) RELATIVE outer_tank
+
+COMPONENT tank_3stp = Union_cylinder(radius=2.2-0.32*3,yheight=step_3_height,priority=203,material_string="Al")
+AT (0,-1.3*0.5+step_3_height*0.5+0.001,0) RELATIVE outer_tank
+ROTATED (0,0,0) RELATIVE outer_tank
+
+COMPONENT tank_vac_3stp = Union_cylinder(radius=2.2-0.32*3-0.02,yheight=step_3_height+0.02,priority=207,material_string="Vacuum")
+AT (0,-1.3*0.5+step_3_height*0.5+0.001-0.0203,0) RELATIVE outer_tank
+ROTATED (0,0,0) RELATIVE outer_tank
+
+COMPONENT tank_4stp = Union_cylinder(radius=2.2-0.32*4,yheight=step_4_height,priority=202,material_string="Al")
+AT (0,-1.3*0.5+step_4_height*0.5+0.001,0) RELATIVE outer_tank
+ROTATED (0,0,0) RELATIVE outer_tank
+
+COMPONENT tank_vac_4stp = Union_cylinder(radius=2.2-0.32*4-0.02,yheight=step_4_height+0.02,priority=206,material_string="Vacuum")
+AT (0,-1.3*0.5+step_4_height*0.5+0.001-0.0104,0) RELATIVE outer_tank
+ROTATED (0,0,0) RELATIVE outer_tank
+
+
+COMPONENT inner_tank = Union_cylinder(radius=2.2-0.32*5,yheight=1.3-step_4_height-top_step,priority=210,material_string="Al")
+AT (0,-1.3*0.5+step_4_height+(1.3-step_4_height-top_step)*0.5,0) RELATIVE outer_tank
+ROTATED (0,0,0) RELATIVE outer_tank
+
+//COMPONENT inner_tank_vacuum_1 = Union_cylinder(radius=2.2-0.32*5-0.02,yheight=1.3-step_4_height-top_step,priority=211,material_string="Vacuum")
+COMPONENT iv_1 = Union_cylinder(radius=2.2-0.32*5-0.02,yheight=1.3-step_4_height-top_step,priority=211,material_string="Vacuum")
+AT (0,-1.3*0.5+step_4_height+(1.3-step_4_height-top_step)*0.5-0.01,0) RELATIVE outer_tank
+ROTATED (0,0,0) RELATIVE outer_tank
+
+COMPONENT iv_2 = Union_cylinder(radius=2.2-0.32*5-0.1,yheight=2.3,priority=240,material_string="Vacuum")
+AT (0,-1.3*0.5+step_4_height+(1.3-step_4_height-top_step)*0.5,0) RELATIVE outer_tank
+ROTATED (0,0,0) RELATIVE outer_tank
+
+COMPONENT top_step = Union_cylinder(radius=0.91,yheight=0.2,priority=213,material_string="Al")
+AT (0,0.5*top_tank_height+lower_tank_top_offset+0.001-0.1,0) RELATIVE backend_center_direction
+ROTATED (0,0,0) RELATIVE backend_center_direction
+
+COMPONENT top_tank_outer = Union_cylinder(radius=1.8,yheight=top_tank_height,priority=220,p_interact=0.3,material_string="Al")
+AT (0,0.5*top_tank_height+lower_tank_top_offset-0.005,0) RELATIVE backend_center_direction
+ROTATED (0,0,0) RELATIVE backend_center_direction
+
+*/
+
+COMPONENT top_tank_o_vac = Union_cylinder(radius=1.8-0.02,yheight=top_tank_height,priority=221,material_string="Vacuum")
+AT (0,0.5*top_tank_height+lower_tank_top_offset-0.005-0.01,0) RELATIVE backend_center_direction
+ROTATED (0,0,0) RELATIVE backend_center_direction
+
+/*
+
+COMPONENT top_tank_i = Union_cylinder(radius=1.0,yheight=top_tank_height,priority=222,p_interact=0.3,material_string="Al")
+AT (0,0.5*top_tank_height+lower_tank_top_offset-0.008,0) RELATIVE backend_center_direction
+ROTATED (0,0,0) RELATIVE backend_center_direction
+
+COMPONENT top_tank_i_vac = Union_cylinder(radius=1.0-0.02,yheight=top_tank_height+0.02,priority=223,material_string="Vacuum")
+AT (0,0.5*top_tank_height+lower_tank_top_offset+0.011,0) RELATIVE backend_center_direction
+ROTATED (0,0,0) RELATIVE backend_center_direction
+
+COMPONENT top_vac = Union_cylinder(radius=0.9,yheight=0.4,priority=224,material_string="Vacuum")
+AT (0,0.5*top_tank_height+lower_tank_top_offset+0.011,0) RELATIVE backend_center_direction
+ROTATED (0,0,0) RELATIVE backend_center_direction
+
+*/
+
+
+/*
+// Be filter
+COMPONENT Be_filter = Union_cylinder(radius=Filter_Be_outer_radius,yheight=0.185,priority=500,material_string="Be")
+AT (0,0,0) RELATIVE backend_center_direction
+ROTATED (0,0,0) RELATIVE backend_center_direction
+
+COMPONENT Be_filter_vacuum = Union_cylinder(radius=Filter_Be_outer_radius-Filter_Be_thickness,yheight=0.188,priority=501,material_string="Vacuum")
+AT (0,0,0) RELATIVE backend_center_direction
+ROTATED (0,0,0) RELATIVE backend_center_direction
+
+%include "Cd_blades.c"
+
+COMPONENT Be_filter_case_speed_up = Union_cylinder(radius=Filter_Be_outer_radius+0.005,yheight=0.189,priority=499,material_string="Vacuum")
+AT (0,0,0) RELATIVE backend_center_direction
+ROTATED (0,0,0) RELATIVE backend_center_direction
+*/
+
+
+COMPONENT tank_mask_direction = Arm()
+AT (0,0,0) RELATIVE backend_center_direction
+ROTATED (0,-45,0) RELATIVE backend_center_direction // -45 doesn't work
+
+
+// Max mask_string length 124 characters
+COMPONENT tank_mask_vacuum = Union_box(xwidth=5,yheight=5,zdepth=5,priority=1,
+mask_string="outer_tank_vac,top_tank_o_vac,Be_filter")
+AT (2.5,0,2.5) RELATIVE tank_mask_direction
+ROTATED (0,0,0) RELATIVE tank_mask_direction
+
+/*
+COMPONENT tank_mask_Al = Union_box(xwidth=5,yheight=4.99,zdepth=5,priority=1,
+mask_string="outer_tank,tank_1stp,tank_2stp,tank_3stp,tank_4stp,inner_tank,top_step,top_tank_outer,top_tank_i")
+AT (2.5-0.01,0,2.5-0.01) RELATIVE tank_mask_direction
+ROTATED (0,0,0) RELATIVE tank_mask_direction
+*/
+
+
+COMPONENT logger_space_xz_all = Union_logger_2D_space(filename="space_xz.dat",
+    D_direction_1="z",n1=1000,D1_min=-0.25,D1_max=2.4,
+    D_direction_2="x",n2=1000,D2_min=-0.50,D2_max=2.4)
+AT (0,0,0) RELATIVE target
+
+COMPONENT logger_space_xy_all = Union_logger_2D_space(filename="space_zy.dat",
+    D_direction_1="z",n1=1000,D1_min=-0.25,D1_max=2.4,
+    D_direction_2="y",n2=1000,D2_min=-1.5,D2_max=0.75)
+AT (0,0,0) RELATIVE target
+
+COMPONENT logger_space_zy_all = Union_logger_2D_space(filename="space_xy.dat",
+    D_direction_1="x",n1=1000,D1_min=-0.50,D1_max=2.4,
+    D_direction_2="y",n2=1000,D2_min=-1.5,D2_max=0.75)
+AT (0,0,0) RELATIVE target
+
+
+COMPONENT test_sample = Union_master()
+AT(0,0,0) RELATIVE beam_center
+ROTATED(0,0,0) RELATIVE beam_center
+EXTEND
+%{
+//flag1 = logger_conditional_extend_array[1];
+n_scattering_events = number_of_scattering_events;
+%}
+
+/*
+COMPONENT banana_detector = Monitor_nD(
+xwidth=1,yheight=0.2,
+options = "banana, theta limits=[-170,170] bins=341, t limits=[3.5E-3 5E-3] bins=500",restore_neutron=1,filename="tof_b")
+WHEN(n_scattering_events > 0)
+AT (0,0,0) RELATIVE beam_center
+ROTATED (0,0,0) RELATIVE beam_center
+
+COMPONENT banana_detector_single = Monitor_nD(
+xwidth=1,yheight=0.2,
+options = "banana, theta limits=[-170,170] bins=341, t limits=[3.5E-3 5E-3] bins=500",restore_neutron=1,filename="tof_b_single")
+WHEN (n_scattering_events == 1)
+AT (0,0,0) RELATIVE beam_center
+ROTATED (0,0,0) RELATIVE beam_center
+
+COMPONENT tof_banana_detector_flag1 = Monitor_nD(
+xwidth=1,yheight=0.2,
+options = "banana, theta limits=[-170,170] bins=341, t limits=[3.5E-3 5E-3] bins=500",restore_neutron=1,filename="tof_b_f1")
+WHEN(flag1 == 1)
+AT (0,0,0) RELATIVE beam_center
+ROTATED (0,0,0) RELATIVE beam_center
+
+COMPONENT m4pi = PSD_monitor_4PI(radius=2, nx=180, ny=180, filename="Events.dat", restore_neutron=1)
+AT (0, 0, 0) RELATIVE beam_center
+ROTATED (0,0,0) RELATIVE beam_center
+*/
+
+/*
+COMPONENT arm_1 = Arm()
+  AT (0, 0, 0) RELATIVE beam_center
+EXTEND
+%{
+	if (scattered_1 + scattered_2 + scattered_3 != 3) ABSORB;
+%}
+
+
+COMPONENT m4pi_three_samples = PSD_monitor_4PI(radius=2, nx=180, ny=180, filename="Events.dat", restore_neutron=1)
+WHEN (scattered_1 + scattered_2 + scattered_3 == 3)
+AT (0, 0, 0) RELATIVE beam_center
+ROTATED (0,0,0) RELATIVE beam_center
+
+
+COMPONENT Banana_monitor = Monitor_nD(radius=2, yheight=0.1, options="banana, theta limits=[20,170], bins=500",filename="banana.dat",restore_neutron=1)
+AT (0,0,0) RELATIVE beam_center
+ROTATED (0,0,0) RELATIVE beam_center
+
+COMPONENT detector = PSD_monitor(xwidth=0.1, yheight=0.08, nx=200, ny=200, filename="PSD.dat", restore_neutron=1)
+AT (0,0,0.4) RELATIVE beam_center
+ROTATED (0,0,0) RELATIVE beam_center
+*/
+
+
+
+
+END
+

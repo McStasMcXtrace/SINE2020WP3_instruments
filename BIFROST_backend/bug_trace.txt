@@ -1,0 +1,332 @@
+----------- NEW RAY -------------------------------------------------
+Union_master component name: test_sample 
+ 
+LIST: Initial mask status list = [0]
+Starting current_volume = 0
+----------- START OF WHILE LOOP --------------------------------------
+------------------ INTERSECTION_TIME_TABLE -----------------
+           | CALCULATED  | - SOLUTION 0 - | - SOLUTION 1 - |
+Volume 0   | ---- 0 ---- |                |                |
+Volume 1   | ---- 0 ---- |                |                |
+Volume 2   | ---- 0 ---- |                |                |
+Volume 3   | ---- 0 ---- |                |                |
+Volume 4   | ---- 0 ---- |                |                |
+Volume 5   | ---- 0 ---- |                |                |
+Volume 6   | ---- 0 ---- |                |                |
+------------------------------------------------------------
+current_volume = 0 
+Intersect_list = 2 being checked 
+running intersection for intersect_list with *check = 2 
+Intersect_list = 4 being checked 
+running intersection for intersect_list with *check = 4 
+Intersect_list = 6 being checked 
+running intersection for intersect_list with *check = 6 
+------------------ INTERSECTION_TIME_TABLE -----------------
+           | CALCULATED  | - SOLUTION 0 - | - SOLUTION 1 - |
+Volume 0   | ---- 0 ---- |                |                |
+Volume 1   | ---- 0 ---- |                |                |
+Volume 2   | ---- 1 ---- |   0.00325921   |   0.00337410   |
+Volume 3   | ---- 0 ---- |                |                |
+Volume 4   | ---- 1 ---- |   -1.0000000   |   -1.0000000   |
+Volume 5   | ---- 0 ---- |                |                |
+Volume 6   | ---- 1 ---- |   0.00331666   |   0.00884442   |
+------------------------------------------------------------
+min_intersection_time = 0.003259 
+min_solution          = 0 
+min_volume            = 2 
+time_found            = 1 
+Propagate out of volume 0
+r = (0.000755,0.002189,-3.000000) v = (0.374109,-0.331052,904.525564) 
+r = (0.001974,0.001110,-0.051963) v = (0.374109,-0.331052,904.525564) 
+PROPAGATION FROM VOLUME 0 
+Min volume is not a mask, next volume = min volume
+LIST: Updated mask status list = [0]
+LIST: Updated current_mask_intersect_list_status = [0]
+ TO VOLUME 2 
+----------- END OF WHILE LOOP --------------------------------------
+----------- START OF WHILE LOOP --------------------------------------
+------------------ INTERSECTION_TIME_TABLE -----------------
+           | CALCULATED  | - SOLUTION 0 - | - SOLUTION 1 - |
+Volume 0   | ---- 0 ---- |                |                |
+Volume 1   | ---- 0 ---- |                |                |
+Volume 2   | ---- 1 ---- |   -1.0000000   |   0.00337410   |
+Volume 3   | ---- 0 ---- |                |                |
+Volume 4   | ---- 1 ---- |   -1.0000000   |   -1.0000000   |
+Volume 5   | ---- 0 ---- |                |                |
+Volume 6   | ---- 1 ---- |   0.00331666   |   0.00884442   |
+------------------------------------------------------------
+current_volume = 2 
+Intersect_list = 3 being checked 
+running intersection for intersect_list with *check = 3 
+Intersect_list = 6 being checked 
+------------------ INTERSECTION_TIME_TABLE -----------------
+           | CALCULATED  | - SOLUTION 0 - | - SOLUTION 1 - |
+Volume 0   | ---- 0 ---- |                |                |
+Volume 1   | ---- 0 ---- |                |                |
+Volume 2   | ---- 1 ---- |   -1.0000000   |   0.00337410   |
+Volume 3   | ---- 1 ---- |   0.00326142   |   0.00337189   |
+Volume 4   | ---- 1 ---- |   -1.0000000   |   -1.0000000   |
+Volume 5   | ---- 0 ---- |                |                |
+Volume 6   | ---- 1 ---- |   0.00331666   |   0.00884442   |
+------------------------------------------------------------
+min_intersection_time = 0.003261 
+min_solution          = 0 
+min_volume            = 3 
+time_found            = 1 
+my_trace = 0.049398, my_sum = 0.049398
+my_trace = 6.856693, my_sum = 6.906090
+time_propagated_without_scattering = 0.003259.
+v_length                           = 904.525702.
+exp(- length_to_boundery*my_sum) = 0.986272. length_to_boundery = 0.002002. my_sum = 6.906090.
+Propagate out of volume 2
+r = (0.001974,0.001110,-0.051963) v = (0.374109,-0.331052,904.525564) 
+r = (0.001975,0.001109,-0.049961) v = (0.374109,-0.331052,904.525564) 
+PROPAGATION FROM VOLUME 2 
+Min volume is not a mask, next volume = min volume
+LIST: Updated mask status list = [0]
+LIST: Updated current_mask_intersect_list_status = [0]
+ TO VOLUME 3 
+----------- END OF WHILE LOOP --------------------------------------
+----------- START OF WHILE LOOP --------------------------------------
+------------------ INTERSECTION_TIME_TABLE -----------------
+           | CALCULATED  | - SOLUTION 0 - | - SOLUTION 1 - |
+Volume 0   | ---- 0 ---- |                |                |
+Volume 1   | ---- 0 ---- |                |                |
+Volume 2   | ---- 1 ---- |   -1.0000000   |   0.00337410   |
+Volume 3   | ---- 1 ---- |   -1.0000000   |   0.00337189   |
+Volume 4   | ---- 1 ---- |   -1.0000000   |   -1.0000000   |
+Volume 5   | ---- 0 ---- |                |                |
+Volume 6   | ---- 1 ---- |   0.00331666   |   0.00884442   |
+------------------------------------------------------------
+current_volume = 3 
+Intersect_list = 1 being checked 
+running intersection for intersect_list with *check = 1 
+Intersect_list = 6 being checked 
+------------------ INTERSECTION_TIME_TABLE -----------------
+           | CALCULATED  | - SOLUTION 0 - | - SOLUTION 1 - |
+Volume 0   | ---- 0 ---- |                |                |
+Volume 1   | ---- 1 ---- |   0.00329465   |   0.00333866   |
+Volume 2   | ---- 1 ---- |   -1.0000000   |   0.00337410   |
+Volume 3   | ---- 1 ---- |   -1.0000000   |   0.00337189   |
+Volume 4   | ---- 1 ---- |   -1.0000000   |   -1.0000000   |
+Volume 5   | ---- 0 ---- |                |                |
+Volume 6   | ---- 1 ---- |   0.00331666   |   0.00884442   |
+------------------------------------------------------------
+min_intersection_time = 0.003295 
+min_solution          = 0 
+min_volume            = 1 
+time_found            = 1 
+Propagate out of volume 3
+r = (0.001975,0.001109,-0.049961) v = (0.374109,-0.331052,904.525564) 
+r = (0.001987,0.001098,-0.019901) v = (0.374109,-0.331052,904.525564) 
+PROPAGATION FROM VOLUME 3 
+Min volume is not a mask, next volume = min volume
+LIST: Updated mask status list = [0]
+LIST: Updated current_mask_intersect_list_status = [0]
+ TO VOLUME 1 
+----------- END OF WHILE LOOP --------------------------------------
+----------- START OF WHILE LOOP --------------------------------------
+------------------ INTERSECTION_TIME_TABLE -----------------
+           | CALCULATED  | - SOLUTION 0 - | - SOLUTION 1 - |
+Volume 0   | ---- 0 ---- |                |                |
+Volume 1   | ---- 1 ---- |   -1.0000000   |   0.00333866   |
+Volume 2   | ---- 1 ---- |   -1.0000000   |   0.00337410   |
+Volume 3   | ---- 1 ---- |   -1.0000000   |   0.00337189   |
+Volume 4   | ---- 1 ---- |   -1.0000000   |   -1.0000000   |
+Volume 5   | ---- 0 ---- |                |                |
+Volume 6   | ---- 1 ---- |   0.00331666   |   0.00884442   |
+------------------------------------------------------------
+current_volume = 1 
+Intersect_list = 6 being checked 
+------------------ INTERSECTION_TIME_TABLE -----------------
+           | CALCULATED  | - SOLUTION 0 - | - SOLUTION 1 - |
+Volume 0   | ---- 0 ---- |                |                |
+Volume 1   | ---- 1 ---- |   -1.0000000   |   0.00333866   |
+Volume 2   | ---- 1 ---- |   -1.0000000   |   0.00337410   |
+Volume 3   | ---- 1 ---- |   -1.0000000   |   0.00337189   |
+Volume 4   | ---- 1 ---- |   -1.0000000   |   -1.0000000   |
+Volume 5   | ---- 0 ---- |                |                |
+Volume 6   | ---- 1 ---- |   0.00331666   |   0.00884442   |
+------------------------------------------------------------
+min_intersection_time = 0.003317 
+min_solution          = 0 
+min_volume            = 6 
+time_found            = 1 
+my_trace = 35.683297, my_sum = 35.683297
+my_trace = 0.000000, my_sum = 35.683297
+time_propagated_without_scattering = 0.003295.
+v_length                           = 904.525702.
+exp(- length_to_boundery*my_sum) = 0.491578. length_to_boundery = 0.019901. my_sum = 35.683297.
+SCATTERING EVENT 
+current_volume            = 1 
+r = (0.001987,0.001098,-0.019901) v = (0.374109,-0.331052,904.525564) 
+time to scattering        = 0.00000082662407658933 
+Running logger system for specific volumes 
+Running logger system for all volumes 
+SCATTERED SUCSSESFULLY 
+r = (0.001987,0.001098,-0.019153) v = (-714.326286,-199.687682,517.715684) 
+----------- END OF WHILE LOOP --------------------------------------
+----------- START OF WHILE LOOP --------------------------------------
+------------------ INTERSECTION_TIME_TABLE -----------------
+           | CALCULATED  | - SOLUTION 0 - | - SOLUTION 1 - |
+Volume 0   | ---- 0 ---- |                |                |
+Volume 1   | ---- 0 ---- |                |                |
+Volume 2   | ---- 0 ---- |                |                |
+Volume 3   | ---- 0 ---- |                |                |
+Volume 4   | ---- 0 ---- |                |                |
+Volume 5   | ---- 0 ---- |                |                |
+Volume 6   | ---- 0 ---- |                |                |
+------------------------------------------------------------
+current_volume = 1 
+Intersect_list = 6 being checked 
+running intersection for intersect_list with *check = 6 
+Checking if children of current_volume = 1 have intersections. 
+intersection_with_children = 0 
+------------------ INTERSECTION_TIME_TABLE -----------------
+           | CALCULATED  | - SOLUTION 0 - | - SOLUTION 1 - |
+Volume 0   | ---- 0 ---- |                |                |
+Volume 1   | ---- 1 ---- |   -0.0000012   |   0.00003037   |
+Volume 2   | ---- 0 ---- |                |                |
+Volume 3   | ---- 0 ---- |                |                |
+Volume 4   | ---- 0 ---- |                |                |
+Volume 5   | ---- 0 ---- |                |                |
+Volume 6   | ---- 1 ---- |   -1.0000000   |   -1.0000000   |
+------------------------------------------------------------
+min_intersection_time = 0.000030 
+min_solution          = 1 
+min_volume            = 1 
+time_found            = 1 
+my_trace = 35.683297, my_sum = 35.683297
+my_trace = 0.000000, my_sum = 35.683297
+time_propagated_without_scattering = 0.000000.
+v_length                           = 904.525701.
+exp(- length_to_boundery*my_sum) = 0.375281. length_to_boundery = 0.027466. my_sum = 35.683297.
+SCATTERING EVENT 
+current_volume            = 1 
+r = (0.001987,0.001098,-0.019153) v = (-714.326286,-199.687682,517.715684) 
+time to scattering        = 0.00000503546933451513 
+Running logger system for specific volumes 
+Running logger system for all volumes 
+SCATTERED SUCSSESFULLY 
+r = (-0.001610,0.000092,-0.016546) v = (829.987568,299.539869,-198.905116) 
+----------- END OF WHILE LOOP --------------------------------------
+----------- START OF WHILE LOOP --------------------------------------
+------------------ INTERSECTION_TIME_TABLE -----------------
+           | CALCULATED  | - SOLUTION 0 - | - SOLUTION 1 - |
+Volume 0   | ---- 0 ---- |                |                |
+Volume 1   | ---- 0 ---- |                |                |
+Volume 2   | ---- 0 ---- |                |                |
+Volume 3   | ---- 0 ---- |                |                |
+Volume 4   | ---- 0 ---- |                |                |
+Volume 5   | ---- 0 ---- |                |                |
+Volume 6   | ---- 0 ---- |                |                |
+------------------------------------------------------------
+current_volume = 1 
+Intersect_list = 6 being checked 
+running intersection for intersect_list with *check = 6 
+Checking if children of current_volume = 1 have intersections. 
+intersection_with_children = 0 
+------------------ INTERSECTION_TIME_TABLE -----------------
+           | CALCULATED  | - SOLUTION 0 - | - SOLUTION 1 - |
+Volume 0   | ---- 0 ---- |                |                |
+Volume 1   | ---- 1 ---- |   -0.0000160   |   0.00001062   |
+Volume 2   | ---- 0 ---- |                |                |
+Volume 3   | ---- 0 ---- |                |                |
+Volume 4   | ---- 0 ---- |                |                |
+Volume 5   | ---- 0 ---- |                |                |
+Volume 6   | ---- 1 ---- |   -1.0000000   |   -1.0000000   |
+------------------------------------------------------------
+min_intersection_time = 0.000011 
+min_solution          = 1 
+min_volume            = 1 
+time_found            = 1 
+my_trace = 35.683297, my_sum = 35.683297
+my_trace = 0.000000, my_sum = 35.683297
+time_propagated_without_scattering = 0.000000.
+v_length                           = 904.525700.
+exp(- length_to_boundery*my_sum) = 0.709869. length_to_boundery = 0.009603. my_sum = 35.683297.
+Propagate out of volume 1
+r = (-0.001610,0.000092,-0.016546) v = (829.987568,299.539869,-198.905116) 
+r = (0.007202,0.003273,-0.018658) v = (829.987568,299.539869,-198.905116) 
+PROPAGATION FROM VOLUME 1 
+min_volume == current_volume 
+LIST: Updated current_mask_intersect_list_status = [0]
+ TO VOLUME 0 
+----------- END OF WHILE LOOP --------------------------------------
+----------- START OF WHILE LOOP --------------------------------------
+------------------ INTERSECTION_TIME_TABLE -----------------
+           | CALCULATED  | - SOLUTION 0 - | - SOLUTION 1 - |
+Volume 0   | ---- 0 ---- |                |                |
+Volume 1   | ---- 1 ---- |   -0.0000160   |   -1.0000000   |
+Volume 2   | ---- 0 ---- |                |                |
+Volume 3   | ---- 0 ---- |                |                |
+Volume 4   | ---- 0 ---- |                |                |
+Volume 5   | ---- 0 ---- |                |                |
+Volume 6   | ---- 1 ---- |   -1.0000000   |   -1.0000000   |
+------------------------------------------------------------
+current_volume = 0 
+Intersect_list = 2 being checked 
+running intersection for intersect_list with *check = 2 
+Intersect_list = 4 being checked 
+running intersection for intersect_list with *check = 4 
+Intersect_list = 6 being checked 
+------------------ INTERSECTION_TIME_TABLE -----------------
+           | CALCULATED  | - SOLUTION 0 - | - SOLUTION 1 - |
+Volume 0   | ---- 0 ---- |                |                |
+Volume 1   | ---- 1 ---- |   -0.0000160   |   -1.0000000   |
+Volume 2   | ---- 1 ---- |   -0.0000605   |   0.00005511   |
+Volume 3   | ---- 0 ---- |                |                |
+Volume 4   | ---- 1 ---- |   -0.0025803   |   -0.0003342   |
+Volume 5   | ---- 0 ---- |                |                |
+Volume 6   | ---- 1 ---- |   -1.0000000   |   -1.0000000   |
+------------------------------------------------------------
+min_intersection_time = 0.000055 
+min_solution          = 1 
+min_volume            = 2 
+time_found            = 1 
+Propagate out of volume 0
+r = (0.007202,0.003273,-0.018658) v = (829.987568,299.539869,-198.905116) 
+r = (0.044129,0.016599,-0.027507) v = (829.987568,299.539869,-198.905116) 
+PROPAGATION FROM VOLUME 0 
+Min volume is not a mask, next volume = min volume
+LIST: Updated mask status list = [0]
+LIST: Updated current_mask_intersect_list_status = [0]
+ TO VOLUME 2 
+----------- END OF WHILE LOOP --------------------------------------
+----------- START OF WHILE LOOP --------------------------------------
+------------------ INTERSECTION_TIME_TABLE -----------------
+           | CALCULATED  | - SOLUTION 0 - | - SOLUTION 1 - |
+Volume 0   | ---- 0 ---- |                |                |
+Volume 1   | ---- 1 ---- |   -0.0000160   |   -1.0000000   |
+Volume 2   | ---- 1 ---- |   -0.0000605   |   -1.0000000   |
+Volume 3   | ---- 0 ---- |                |                |
+Volume 4   | ---- 1 ---- |   -0.0025803   |   -0.0003342   |
+Volume 5   | ---- 0 ---- |                |                |
+Volume 6   | ---- 1 ---- |   -1.0000000   |   -1.0000000   |
+------------------------------------------------------------
+current_volume = 2 
+Intersect_list = 3 being checked 
+running intersection for intersect_list with *check = 3 
+Intersect_list = 6 being checked 
+------------------ INTERSECTION_TIME_TABLE -----------------
+           | CALCULATED  | - SOLUTION 0 - | - SOLUTION 1 - |
+Volume 0   | ---- 0 ---- |                |                |
+Volume 1   | ---- 1 ---- |   -0.0000160   |   -1.0000000   |
+Volume 2   | ---- 1 ---- |   -0.0000605   |   -1.0000000   |
+Volume 3   | ---- 1 ---- |   -0.0000580   |   0.00005263   |
+Volume 4   | ---- 1 ---- |   -0.0025803   |   -0.0003342   |
+Volume 5   | ---- 0 ---- |                |                |
+Volume 6   | ---- 1 ---- |   -1.0000000   |   -1.0000000   |
+------------------------------------------------------------
+min_intersection_time = 0.000055 
+min_solution          = 1 
+min_volume            = 2 
+time_found            = 0 
+
+----------------------------------------------------------------------------------------------------
+Union_master test_sample: Somehow reached a situation with no intersection time found, but still inside volume 2 instead of 0
+The ray is in volume       5
+LIST: mask status list = [0]
+0:0 - 1:2 - 2:0 - 3:0 - 4:0 - 5:0 - 6:0 - 
+r = (0.044129,0.016599,-0.027507) v = (829.987568,299.539869,-198.905116) 
+Trace error number (1/100) 
