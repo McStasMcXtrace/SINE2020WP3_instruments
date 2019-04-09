@@ -32,10 +32,13 @@
 
 /* Change name of instrument and input parameters with default values */
 DEFINE INSTRUMENT Magnon_bcc_visualisation(lambda=10, dlambda=9.9, Rotation=0, inelastic=0.7, aa=6.283185307179586,
-				     sample_J1=2, sample_J2=0, TT=300, FerroMagnet=0, Verbose=0, imultiplier=1)
+					   sample_J1=2, sample_J2=0, TT=300, FerroMagnet=0, Verbose=0, imultiplier=1,IDX=-22,
+					   noPSD=1,energy_cuts=0)
 
 DECLARE %{
   double Samplechoice;
+  double Energy;
+  int Detectable;
 %}
 
 TRACE
@@ -49,6 +52,7 @@ COMPONENT source = Source_simple(
 AT (0,0,0) ABSOLUTE
 EXTEND %{
   Samplechoice=rand01();
+  Detectable=0;
 %}
 
 
@@ -66,7 +70,7 @@ COMPONENT Magnon = Magnon_bcc(
     verbose=Verbose, 
     T=TT, 
     FM = FerroMagnet,
-    target_index=0,
+    target_index=8,
     focus_xw=0, 
     focus_yh=0,
     focus_aw=180, /* For statistics considerations, only a small angular */
@@ -79,25 +83,134 @@ EXTEND %{
 %}
 
 
-COMPONENT Lattice = Single_crystal(order=1, 
-     reflections = "BCC_fake.lau", mosaic=30, radius = 0.02, yheight = 0.03,   delta_d_d=1e-3,
-     ax =-aa , ay = 0, az =0 , bx =0 , by =0, bz = aa , cx =0 , cy = aa , cz =0, barns=1)
+  COMPONENT Lattice = Arm()
   WHEN (inelastic<1 && Samplechoice>=inelastic) AT ( 0, 0, 5.1) RELATIVE source
   ROTATED (0, Rotation, 0) RELATIVE source
 EXTEND %{
    p/=(1-mcipinelastic);
    // Remove direct beam
-   if(!SCATTERED) ABSORB;
+   //if(!SCATTERED) ABSORB;
 %}
 
-/* COMPONENT Sqqw0 = Sqq_w_monitor(filename="qa_vs_qb_0",nE=3,nqa=401,nqb=401,qamin=0.5,qamax=4.5,qamin=0.5,qbmax=4.5,index=-2,Emin=-0.1, Emax=0.1, yheight=0.1) */
-/* AT (0,0,0) RELATIVE Magnon   */
+/* Ideal representation */
+  COMPONENT Sqqw = Sqq_w_monitor(filename="qa_vs_qb",nE=6,nqa=451,nqb=451,qamin=-4.5,qamax=4.5,qbmin=-4.5,qbmax=4.5,index=-2,Emin=0, Emax=16, yheight=0.1)
+  AT (0,0,0) RELATIVE Magnon
 
-COMPONENT Sqqw = Sqq_w_monitor(filename="qa_vs_qb",nE=24,nqa=401,nqb=401,qamin=0.5,qamax=4.5,qamin=0.5,qbmax=4.5,index=-2,Emin=0, Emax=16, yheight=0.1)
+  COMPONENT det= PSD_monitor_4PI(radius=1.01, nx=360,ny=180,filename="psd",restore_neutron=1,nowritefile=noPSD)
 AT (0,0,0) RELATIVE Magnon
 
-COMPONENT det= PSD_monitor_4PI(radius=2.1, nx=360,ny=180,filename="psd")
-AT (0,0,0) RELATIVE Magnon
+/* Add slits to show that we only accept certain directions */
 
+COMPONENT Arm1 = Arm()
+AT (0,0,0) RELATIVE Magnon
+ROTATED (0,10,0) ABSOLUTE
+
+COMPONENT Arm2 = Arm()
+AT (0,0,0) RELATIVE Magnon
+ROTATED (0,20,0) ABSOLUTE
+
+COMPONENT Arm3 = Arm()
+AT (0,0,0) RELATIVE Magnon
+ROTATED (0,30,0) ABSOLUTE
+
+COMPONENT Arm4 = Arm()
+AT (0,0,0) RELATIVE Magnon
+ROTATED (0,40,0) ABSOLUTE
+
+COMPONENT Arm5 = Arm()
+AT (0,0,0) RELATIVE Magnon
+ROTATED (0,50,0) ABSOLUTE
+
+COMPONENT Arm6 = Arm()
+AT (0,0,0) RELATIVE Magnon
+ROTATED (0,60,0) ABSOLUTE
+
+COMPONENT Arm7 = Arm()
+AT (0,0,0) RELATIVE Magnon
+ROTATED (0,70,0) ABSOLUTE
+
+COMPONENT Arm8 = Arm()
+AT (0,0,0) RELATIVE Magnon
+ROTATED (0,80,0) ABSOLUTE
+
+COMPONENT Arm9 = Arm()
+AT (0,0,0) RELATIVE Magnon
+ROTATED (0,90,0) ABSOLUTE
+EXTEND %{
+    /* Check particle energy */
+if (mcipenergy_cuts==1) {
+    Energy = VS2E*(  vx*vx +  vy*vy +    vz*vz);
+    if ((fabs(Energy-2.5)/2.5)<0.03) Detectable=1;
+    if ((fabs(Energy-2.8)/2.8)<0.03) Detectable=1;
+    if ((fabs(Energy-3.1)/3.1)<0.03) Detectable=1;
+    if ((fabs(Energy-3.5)/3.5)<0.03) Detectable=1;
+    if ((fabs(Energy-4.0)/4.0)<0.03) Detectable=1;
+    if ((fabs(Energy-4.5)/4.5)<0.03) Detectable=1;
+    if ((fabs(Energy-5.0)/5.0)<0.03) Detectable=1;
+    if ((fabs(Energy-5.5)/5.5)<0.03) Detectable=1;
+    if ((fabs(Energy-6.5)/6.5)<0.03) Detectable=1;
+    if ((fabs(Energy-8.0)/8.0)<0.03) Detectable=1;
+    if(!Detectable) ABSORB;
+}
+%}
+
+    
+COMPONENT Slit1 = Slit(xwidth=0.05, yheight=0.05)
+AT (0,0,1.01) RELATIVE Arm1
+GROUP Slits
+
+COMPONENT Slit2 = Slit(xwidth=0.05, yheight=0.05)
+AT (0,0,1.01) RELATIVE Arm2
+GROUP Slits
+
+COMPONENT Slit3 = Slit(xwidth=0.05, yheight=0.05)
+AT (0,0,1.01) RELATIVE Arm3
+GROUP Slits
+
+  COMPONENT Slit4 = Slit(xwidth=0.05, yheight=0.05)
+AT (0,0,1.01) RELATIVE Arm4
+GROUP Slits
+
+COMPONENT Slit5 = Slit(xwidth=0.05, yheight=0.05)
+AT (0,0,1.01) RELATIVE Arm5
+GROUP Slits
+
+  COMPONENT Slit6 = Slit(xwidth=0.05, yheight=0.05)
+AT (0,0,1.01) RELATIVE Arm6
+GROUP Slits
+  
+COMPONENT Slit7 = Slit(xwidth=0.05, yheight=0.05)
+AT (0,0,1.01) RELATIVE Arm7
+GROUP Slits
+
+  COMPONENT Slit8 = Slit(xwidth=0.05, yheight=0.05)
+AT (0,0,1.01) RELATIVE Arm8
+GROUP Slits
+
+COMPONENT Slit9 = Slit(xwidth=0.05, yheight=0.05)
+AT (0,0,1.01) RELATIVE Arm9
+GROUP Slits
+ 
+COMPONENT Catchall = Arm ()
+ AT (0,0,0) RELATIVE Arm9
+GROUP Slits
+EXTEND %{
+  SCATTER;
+%}
+
+COMPONENT Efilter = Arm ()
+ AT (0,0,0) RELATIVE Arm9
+GROUP Slits
+EXTEND %{
+%}
+
+
+
+/* non-deal representation */
+  COMPONENT Sqqw2 = Sqq_w_monitor(radius=1.1,filename="qa_vs_qb_2",nE=6,nqa=451,nqb=451,qamin=-4.5,qamax=4.5,qbmin=-4.5,qbmax=4.5,index=-24,Emin=0, Emax=16, yheight=0.1)
+  AT (0,0,0) RELATIVE Magnon
+
+  /*COMPONENT det1= PSD_monitor_4PI(radius=1.11, nx=360,ny=180,filename="psd1",restore_neutron=1,nowritefile=noPSD)
+    AT (0,0,0) RELATIVE Magnon*/
 END
 
