@@ -1,0 +1,214 @@
+McStas simulation description file for BIFROST_filter.
+Date:    Fri Jan 18 10:36:29 2019
+Program: McStas 2.3 - Apr. 06, 2016
+
+begin instrument: BIFROST_filter
+  File: test/mccode
+  Source: BIFROST_filter_channels.instr
+  Parameters:  A3(double) A4(double) total_filter_angle(double) Filter_outer_radius(double) Filter_inner_radius(double) Filter_channel_height(double) Al_container_thickness(double) Vessel_height(double) Filter_absorbing_blade_width(double) Enable_filter_wedges(double) Be_wedge_offset(double) Be_wedge_length(double) Filter_channel_angular_separation(double) Channel_inner_angle(double) Filter_channel_length(double) Al_channel_width(double) Channel_front_offset(double) number_of_blades_per_channel(int)
+  Trace_enabled: yes
+  Default_main: yes
+  Embedded_runtime: yes
+end instrument
+
+begin simulation: test
+  Format: McCode with text headers
+  URL: http://www.mccode.org
+  Creator: McStas 2.3 - Apr. 06, 2016
+  Instrument: BIFROST_filter_channels.instr
+  Ncount: 1000000
+  Trace: no
+  Gravitation: no
+  Seed: 1547888287
+  Directory: test
+  Param: A3=0
+  Param: A4=32
+  Param: total_filter_angle=92
+  Param: Filter_outer_radius=0.88
+  Param: Filter_inner_radius=0.445
+  Param: Filter_channel_height=0.065
+  Param: Al_container_thickness=0.01
+  Param: Vessel_height=0.1
+  Param: Filter_absorbing_blade_width=0.001
+  Param: Enable_filter_wedges=1
+  Param: Be_wedge_offset=0.05
+  Param: Be_wedge_length=0.2
+  Param: Filter_channel_angular_separation=10
+  Param: Channel_inner_angle=7.8
+  Param: Filter_channel_length=0.32
+  Param: Al_channel_width=0.005
+  Param: Channel_front_offset=0.05
+  Param: number_of_blades_per_channel=11
+end simulation
+
+begin data
+  Date: Fri Jan 18 10:37:02 2019 (1547804222)
+  type: array_2d(1000, 1000)
+  Source: BIFROST_filter (BIFROST_filter_channels.instr)
+  component: logger_space_xz_all
+  position: 0 0 2
+  title: 2D position Union logger in plane zx
+  Ncount: 1000000
+  filename: space_xz.dat
+  statistics: X0=0.0544285; dX=0.174544; Y0=0.00157945; dY=0.027167;
+  signal: Min=0; Max=89.9368; Mean=0.00895274;
+  values: 8952.74 11.5278 6.74758e+06
+  xvar: z 
+  yvar: x 
+  xlabel: z [m]
+  ylabel: x [m]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -0.924 0.924 -0.924 0.924
+  variables: I I_err N
+end data
+
+begin data
+  Date: Fri Jan 18 10:37:03 2019 (1547804223)
+  type: array_2d(1000, 1000)
+  Source: BIFROST_filter (BIFROST_filter_channels.instr)
+  component: logger_space_xy_all
+  position: 0 0 2
+  title: 2D position Union logger in plane xy
+  Ncount: 1000000
+  filename: space_xy.dat
+  statistics: X0=0.00157945; dX=0.027167; Y0=-4.83156e-06; dY=0.00570523;
+  signal: Min=0; Max=22.6068; Mean=0.00895274;
+  values: 8952.74 11.5278 6.74758e+06
+  xvar: x 
+  yvar: y 
+  xlabel: x [m]
+  ylabel: y [m]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -0.924 0.924 -0.06825 0.06825
+  variables: I I_err N
+end data
+
+begin data
+  Date: Fri Jan 18 10:37:03 2019 (1547804223)
+  type: array_2d(1000, 1000)
+  Source: BIFROST_filter (BIFROST_filter_channels.instr)
+  component: logger_space_zy_all
+  position: 0 0 2
+  title: 2D position Union logger in plane zy
+  Ncount: 1000000
+  filename: space_zy.dat
+  statistics: X0=0.0544298; dX=0.174546; Y0=-4.83156e-06; dY=0.00570523;
+  signal: Min=0; Max=6.70053; Mean=0.00895274;
+  values: 8952.74 11.5278 6.74758e+06
+  xvar: z 
+  yvar: y 
+  xlabel: z [m]
+  ylabel: y [m]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -0.88 0.88 -0.06825 0.06825
+  variables: I I_err N
+end data
+
+begin data
+  Date: Fri Jan 18 10:37:04 2019 (1547804224)
+  type: array_2d(1000, 1000)
+  Source: BIFROST_filter (BIFROST_filter_channels.instr)
+  component: logger_space_xz_all_closeup
+  position: 0.352396 0 2.56395
+  title: 2D position Union logger in plane zx
+  Ncount: 1000000
+  filename: space_xz_closeup.dat
+  statistics: X0=-0.108553; dX=0.113128; Y0=-0.0488211; dY=0.145;
+  signal: Min=0; Max=0.619607; Mean=3.07519e-05;
+  values: 30.7519 0.916214 1.16685e+06
+  xvar: z 
+  yvar: x 
+  xlabel: z [m]
+  ylabel: x [m]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -0.3 0.3 -0.3 0.3
+  variables: I I_err N
+end data
+
+begin data
+  Date: Fri Jan 18 10:37:04 2019 (1547804224)
+  type: array_2d(1000, 1000)
+  Source: BIFROST_filter (BIFROST_filter_channels.instr)
+  component: logger_space_xz_all_direct_beam
+  position: 0 0 2
+  title: 2D position Union logger in plane zx
+  Ncount: 1000000
+  filename: space_xz_direct_beam.dat
+  statistics: X0=0.573608; dX=0.0629542; Y0=0.000244259; dY=0.0125895;
+  signal: Min=0; Max=5.80165; Mean=0.000879003;
+  values: 879.003 9.2248 5.0364e+06
+  xvar: z 
+  yvar: x 
+  xlabel: z [m]
+  ylabel: x [m]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: 0.42275 0.924 -0.15 0.15
+  variables: I I_err N
+end data
+
+begin data
+  Date: Fri Jan 18 10:37:05 2019 (1547804225)
+  type: array_1d(200)
+  Source: BIFROST_filter (BIFROST_filter_channels.instr)
+  component: energy
+  position: 0 0 3.08
+  title: Energy monitor
+  Ncount: 1000000
+  filename: energy_transmission.dat
+  statistics: X0=3.11355; dX=1.23112;
+  signal: Min=0; Max=6.28636; Mean=2.57437;
+  values: 514.874 2.20432 121436
+  xvar: E
+  yvar: (I,I_err)
+  xlabel: Energy [meV]
+  ylabel: Intensity
+  xlimits: 1 10
+  variables: E I I_err N
+end data
+
+begin data
+  Date: Fri Jan 18 10:37:05 2019 (1547804225)
+  type: array_1d(300)
+  Source: BIFROST_filter (BIFROST_filter_channels.instr)
+  component: wavelength
+  position: 0 0 3.08
+  title: Wavelength monitor
+  Ncount: 1000000
+  filename: wavelength_transmission.dat
+  statistics: X0=5.50251; dX=1.29569;
+  signal: Min=0; Max=8.66158; Mean=1.71625;
+  values: 514.874 2.20432 121436
+  xvar: L
+  yvar: (I,I_err)
+  xlabel: Wavelength [AA]
+  ylabel: Intensity
+  xlimits: 1 10
+  variables: L I I_err N
+end data
+
+begin data
+  Date: Fri Jan 18 10:37:05 2019 (1547804225)
+  type: array_2d(200, 200)
+  Source: BIFROST_filter (BIFROST_filter_channels.instr)
+  component: PSD
+  position: 0 0 3.08
+  title: PSD monitor
+  Ncount: 1000000
+  filename: PSD_transmission.dat
+  statistics: X0=0.0156664; dX=0.30521; Y0=-0.000416649; dY=0.300855;
+  signal: Min=0; Max=0.585983; Mean=0.0128719;
+  values: 514.874 2.20432 121436
+  xvar: X 
+  yvar: Y 
+  xlabel: X position [cm]
+  ylabel: Y position [cm]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -2.5 2.5 -2.5 2.5
+  variables: I I_err N
+end data

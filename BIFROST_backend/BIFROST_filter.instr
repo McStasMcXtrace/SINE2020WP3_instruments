@@ -1,0 +1,352 @@
+/*******************************************************************************
+*
+* McStas, neutron ray-tracing package
+*         Copyright (C) 1997-2008, All rights reserved
+*         Risoe National Laboratory, Roskilde, Denmark
+*         Institut Laue Langevin, Grenoble, France
+*
+* Instrument: test
+*
+* %Identification
+* Written by: Mads Bertelsen
+* Date: September 2015
+* Origin: University of Copenhagen
+* Version: $Revision: 0.1 $
+*
+* Simple test instrument for sample component.
+*
+* %Description
+* simple test instrument for sample component.
+*
+* Example: filename="source_sct091_tu_02_1.dat" Detector: det_I=9.89304e+09
+*
+* %End
+*******************************************************************************/
+
+DEFINE INSTRUMENT test(
+  A3=0,                                 // Rotation of sample [deg]
+  A4=35,                                // Rotation of center of filter relative to incoming beam [deg]
+  int number_of_blades=90,              // Number of Cd blades in radial collimator section [Int]
+  total_filter_angle=90,                 // Total angle covered by the filter [deg]
+  Filter_outer_radius=0.87,             // Outer radius of filter (including aluminium) [m]
+  Filter_inner_radius=0.30,             // Inner radius of filter (including aluminium) [m]
+  Filter_channel_height=0.12,           // Height of the channels in the filter [m]
+  Al_container_thickness=0.01,          // Al thickness of filter container (both on entry and exit) [m]
+  Filter_main_Be_depth=0.18,            // Depth of the main Be filter starting from the entry Al window
+  Filter_Cd_blade_width=0.001,          // Width of the Cd colimating blades [m]
+  Enable_filter_wedges=1,                // Enable Be wedges between collimator blades [1: Enabled, 0: Disabled]
+  Be_wedge_offset=0.05,                 // Offset of Be wedges from exit Al window, has to be above zero [m]
+  Be_wedge_length=0.15                  // Length of Be wedges between blades [m]
+  )
+
+DECLARE
+%{
+// New code
+double Small_distance;
+
+double Filter_Cd_blade_length;
+double Filter_blade_center_radius;
+double Filter_half_angle;
+double Filter_blade_angular_separation;
+double Filter_Cd_blade_length;
+double Enable_filter_wedges;
+
+int Colimator_blade_activation[300]; // Increase this array size if going above 300 blades
+int Colimator_blade_width[300];
+int iterate,n_scattering_events;
+
+char mask_string_internals[512];
+%}
+
+INITIALIZE
+%{
+// Settings
+Small_distance = 0.001; // Small distance about 1 mm. Can be increased if Union errors happen.
+Filter_half_angle = 0.5*total_filter_angle;
+
+// Input sanitation
+// Dimensins positive (including offset)
+if (total_filter_angle <= 0 || Filter_outer_radius <= 0 || Filter_inner_radius <= 0 || Filter_channel_height <= 0 || Al_container_thickness <= 0 || Filter_main_Be_depth <= 0 || Filter_Cd_blade_width <= 0 || Be_wedge_offset <= 0 || Be_wedge_length <= 0) {
+  printf("All dimensions need to be positive, exiting.\n");
+  exit(1);
+}
+
+if (Filter_outer_radius <= Filter_inner_radius) {
+  printf("Filter outer radius should be larger than inner radius, exiting.\n");
+  exit(1);
+}
+
+// Wedge offset + wedge length < outer_radius - inner_radius - 2*Al_container_thickness
+if (Be_wedge_offset + Be_wedge_length > Filter_outer_radius - Filter_inner_radius - 2.0*Al_container_thickness) {
+  printf("Be wedges extend outside the entry window of the filter, exiting. If this is intended, remove the exit(1) after this warning.\n");
+  exit(1);
+}
+
+// Wedge start avoids main Be end / start
+if (fabs(Filter_outer_radius - Filter_inner_radius - 2.0*Al_container_thickness - Be_wedge_length - Be_wedge_offset) < Small_distance) {
+  printf("In McStas Union, geometries are not allowed to be have tangent faces. This is the case between the Main Be and Wedge Be volume. \n");
+  printf("The geometries are however allowed to overlap, so by increasing Be_wedge_length the two Be pieces can be joined so no gap occurs between them.\n");
+  exit(1);
+}
+
+// Blades avoid Be wedge start / end
+if (Be_wedge_offset <= Small_distance) {
+  printf("The Be_wedge_offset has to be larger than the small distance inserted between the filter exit and blades, usually 1 mm.\n");
+  exit(1);
+}
+
+// Calculate blade seperation from number of blades and total filter angle
+Filter_blade_angular_separation = total_filter_angle / (number_of_blades-1.0);
+
+// No control over blade spacing, they take all space between end of main Be filter and end of the filter.
+// This can be changed to give more control if required.
+Filter_blade_center_radius = 0.5*(Filter_outer_radius-Al_container_thickness+Filter_inner_radius+Al_container_thickness+Filter_main_Be_depth);
+Filter_Cd_blade_length = Filter_outer_radius-Al_container_thickness - Filter_inner_radius - Al_container_thickness - Filter_main_Be_depth - Small_distance;
+
+// Could make system for making every N blades thicker to create channels
+for (iterate=0;iterate<300;iterate++) {
+  Colimator_blade_width[iterate] = Filter_Cd_blade_width;
+}
+
+
+
+
+// Only simulate the number of blades needed. If more than 200 blades are needed, adjust and run print_Cd_blades.py
+for (iterate=0;iterate<number_of_blades;iterate++)
+  Colimator_blade_activation[iterate] = 1;
+  
+for (iterate=number_of_blades;iterate<300;iterate++)
+  Colimator_blade_activation[iterate] = 0;
+
+// A mask is used to mask the internals of the filter instead of having a 360 deg filter.
+// This mask can not mask something with activation counter = 0, (a bug I will look at later)
+// This code avoids masking volumes that doesn't exist when the wedges are disabled
+if (Enable_filter_wedges == 1)
+  sprintf(mask_string_internals,"Filter_container_outer_vacuum,Filter_Be_wedge,Filter_Be_wedge_vacuum,Filter_main_Be");
+else
+  sprintf(mask_string_internals,"Filter_container_outer_vacuum,Filter_main_Be");
+
+%}
+
+TRACE
+
+// McStas Union material definitions. Al, Be, Cd, Vanadium and Na2Ca3Al2F14 powders.
+
+// Al description
+COMPONENT Al_incoherent = Incoherent_process(sigma=4*0.0082,packing_factor=1,unit_cell_volume=66.4)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Al_powder = Powder_process(reflections="Al.laz")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Al = Union_make_material(my_absorption=100*4*0.231/66.4,process_string="Al_incoherent,Al_powder")
+AT (0,0,0) ABSOLUTE
+
+// Be description
+COMPONENT Be_incoherent = Incoherent_process(sigma=2*0.0018,packing_factor=1,unit_cell_volume=16.22)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Be_powder = Powder_process(reflections="Be.laz")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Be = Union_make_material(my_absorption=100*2*0.0076/16.22,process_string="Be_incoherent,Be_powder")
+AT (0,0,0) ABSOLUTE
+
+// Cd description
+COMPONENT Cd_incoherent = Incoherent_process(sigma=2*3.46,packing_factor=1,unit_cell_volume=43.11)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Cd_powder = Powder_process(reflections="Cd.laz")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Cd = Union_make_material(my_absorption=100*2*2520/43.11,process_string="Cd_incoherent,Cd_powder")
+AT (0,0,0) ABSOLUTE
+
+// Vanadium description (used as example sample)
+COMPONENT Vanadium_incoherent = Incoherent_process(sigma=2*4.935,packing_factor=1,unit_cell_volume=27.66)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Vanadium_powder = Powder_process(reflections="V.laz")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Vanadium = Union_make_material(my_absorption=5.08*2/27.66,process_string="Vanadium_incoherent,Vanadium_powder")
+AT (0,0,0) ABSOLUTE
+
+// Na2Ca3Al2F14 description (use for test sample with some Bragg peaks)
+COMPONENT Na2Ca3Al2F14_incoherent = Incoherent_process(sigma=4*3.4176,packing_factor=1,unit_cell_volume=1079.1)
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Na2Ca3Al2F14_powder = Powder_process(reflections="Na2Ca3Al2F14.laz")
+AT (0,0,0) ABSOLUTE
+
+COMPONENT Na2Ca3Al2F14 = Union_make_material(my_absorption=100*4*2.9464/1079.1)
+AT (0,0,0) ABSOLUTE
+
+
+COMPONENT Origin = Progress_bar()
+  AT (0,0,0) ABSOLUTE
+
+// Test source with tight beam
+COMPONENT source = Source_div(
+        xwidth=0.01, yheight=0.01,focus_aw=0.05, focus_ah=0.05,
+        E0 = 5,
+        dE = 2, flux = 1E9)
+AT (0,0,0) RELATIVE Origin
+ROTATED (0,0,0) RELATIVE Origin
+
+COMPONENT sample_position = Arm()
+AT (0,0.0,2.0) RELATIVE source
+ROTATED (0,0,0) RELATIVE source
+
+
+// No sample is necessary, and normal McStas samples can be used here without any issue
+// A sample environment could also be simulated in Union to test the filters rejection of enviornment scattering
+COMPONENT sample = Union_cylinder(
+   radius=0.02,yheight=0.03,
+   priority=1020,material_string="Vanadium")
+AT (0,0,0) RELATIVE sample_position
+ROTATED (0,A3,0) RELATIVE sample_position
+
+// This arms points to the center of the filter.
+COMPONENT filter_direction = Arm()
+AT (0,0,0) RELATIVE sample_position
+ROTATED (0,A4,0) RELATIVE sample_position
+
+// This section describes a split Be filter with internal radial colimation.
+// It is built up of a main Be filer at the inner radius followed by collimation.
+// Wedges of Be can be inserted between the collimator blades
+
+// Exit volume is needed so that rays exit the filter at the end
+COMPONENT Filter_container_outer_exit = Union_cylinder(
+  radius=Filter_outer_radius+Small_distance, yheight=Filter_channel_height+2.5*Al_container_thickness,
+  priority=499,material_string="Exit")
+AT (0,0,0) RELATIVE filter_direction
+ROTATED (0,0,0) RELATIVE filter_direction
+
+COMPONENT Filter_container_outer = Union_cylinder(
+  radius=Filter_outer_radius, yheight=Filter_channel_height+2.0*Al_container_thickness,
+  priority=500,material_string="Al")
+AT (0,0,0) RELATIVE filter_direction
+ROTATED (0,0,0) RELATIVE filter_direction
+
+COMPONENT Filter_container_outer_vacuum = Union_cylinder(
+  radius=Filter_outer_radius-Al_container_thickness, yheight=Filter_channel_height+Small_distance,
+  priority=501,material_string="Vacuum")
+AT (0,0,0) RELATIVE filter_direction
+ROTATED (0,0,0) RELATIVE filter_direction
+
+COMPONENT Filter_Be_wedge = Union_cylinder(
+  radius=Filter_outer_radius-Al_container_thickness-Be_wedge_offset, yheight=Filter_channel_height-3.0*Small_distance,
+  priority=502, material_string="Be",
+  number_of_activations=Enable_filter_wedges)
+AT (0,0,0) RELATIVE filter_direction
+ROTATED (0,0,0) RELATIVE filter_direction
+
+COMPONENT Filter_Be_wedge_vacuum = Union_cylinder(
+  radius=Filter_outer_radius-Al_container_thickness-Be_wedge_offset-Be_wedge_length, yheight=Filter_channel_height-2.0*Small_distance,
+  priority=503, material_string="Vacuum",
+  number_of_activations=Enable_filter_wedges)
+AT (0,0,0) RELATIVE filter_direction
+ROTATED (0,0,0) RELATIVE filter_direction
+
+COMPONENT Filter_main_Be = Union_cylinder(
+  radius=Filter_inner_radius+Filter_main_Be_depth+Al_container_thickness, yheight=Filter_channel_height,
+  priority=504, material_string="Be")
+AT (0,0,0) RELATIVE filter_direction
+ROTATED (0,0,0) RELATIVE filter_direction
+
+COMPONENT Filter_container_inner = Union_cylinder(
+  radius=Filter_inner_radius+Al_container_thickness, yheight=Filter_channel_height+2.0*Al_container_thickness-Small_distance,
+  priority=505, material_string="Al")
+AT (0,0,0) RELATIVE filter_direction
+ROTATED (0,0,0) RELATIVE filter_direction
+
+COMPONENT Filter_container_inner_vacuum = Union_cylinder(
+  radius=Filter_inner_radius, yheight=Filter_channel_height+3.0*Al_container_thickness,
+  priority=506, material_string="Vacuum")
+AT (0,0,0) RELATIVE filter_direction
+ROTATED (0,0,0) RELATIVE filter_direction
+
+
+// Created a filter 360 deg around the sample position.
+// Masks are used to remove the parts not needed.
+// The visualize = 0 option removes these masks from the visualzation of the instrument
+
+// This masks removes the inner parts and just contains the blade area
+COMPONENT container_inner_mask = Union_box(
+  xwidth=0.001,xwidth2=2*5.0*tan(DEG2RAD*0.5*total_filter_angle),
+  yheight=Filter_channel_height+4.0*Al_container_thickness,
+  zdepth=5.0,priority=1,visualize=1,
+  mask_string=mask_string_internals)
+  //mask_string="Filter_container_outer_vacuum,Filter_Be_wedge,Filter_Be_wedge_vacuum,Filter_main_Be") // If wedge is enabled
+  //mask_string="Filter_container_outer_vacuum,Filter_main_Be") // If wedge is disabled
+AT (0,0,2.5) RELATIVE filter_direction
+ROTATED (0,0,0) RELATIVE filter_direction
+
+// This masks removes the execcs container, keeping a Al_container_thickness wall on either side of the filter
+COMPONENT container_mask = Union_box(
+  xwidth=0.001,xwidth2=2*6.0*tan(DEG2RAD*0.5*total_filter_angle),
+  yheight=Filter_channel_height+5.0*Al_container_thickness,
+  zdepth=6.0,priority=1,visualize=1,
+  mask_string="Filter_container_outer,Filter_container_inner,Filter_container_outer_exit")
+AT (0,0,3.0-Al_container_thickness/sin(DEG2RAD*0.5*total_filter_angle)) RELATIVE filter_direction
+ROTATED (0,0,0) RELATIVE filter_direction
+
+// This line includes the 200 Cd blades written by the simple python script called print_Cd_blades.py
+%include "Cd_blades.c"
+
+// These loggers record all scattering events and show the their spatial distribution projected onto different planes
+COMPONENT logger_space_xz_all = Union_logger_2D_space(filename="space_xz.dat",
+    D_direction_1="z",n1=1000,D1_min=-Filter_outer_radius*1.05,D1_max=Filter_outer_radius*1.05,
+    D_direction_2="x",n2=1000,D2_min=-Filter_outer_radius*1.05,D2_max=Filter_outer_radius*1.05)
+AT (0,0,0) RELATIVE sample_position
+
+COMPONENT logger_space_xy_all = Union_logger_2D_space(filename="space_xy.dat",
+    D_direction_1="x",n1=1000,D1_min=-Filter_outer_radius*1.05,D1_max=Filter_outer_radius*1.05,
+    D_direction_2="y",n2=1000,D2_min=-Filter_channel_height*1.05,D2_max=Filter_channel_height*1.05)
+AT (0,0,0) RELATIVE sample_position
+
+COMPONENT logger_space_zy_all = Union_logger_2D_space(filename="space_zy.dat",
+    D_direction_1="z",n1=1000,D1_min=-Filter_outer_radius,D1_max=Filter_outer_radius,
+    D_direction_2="y",n2=1000,D2_min=-Filter_channel_height*1.05,D2_max=Filter_channel_height*1.05)
+AT (0,0,0) RELATIVE sample_position
+
+COMPONENT logger_space_xz_all_closeup = Union_logger_2D_space(filename="space_xz_closeup.dat",
+    D_direction_1="z",n1=1000,D1_min=-0.3,D1_max=0.3,
+    D_direction_2="x",n2=1000,D2_min=-0.3,D2_max=0.3)
+AT (0,0,Filter_blade_center_radius) RELATIVE filter_direction
+
+COMPONENT logger_space_xz_all_direct_beam = Union_logger_2D_space(filename="space_xz_direct_beam.dat",
+    D_direction_1="z",n1=1000,D1_min=Filter_inner_radius*0.95,D1_max=Filter_outer_radius*1.05,
+    D_direction_2="x",n2=1000,D2_min=-0.15,D2_max=0.15)
+AT (0,0,0) RELATIVE sample_position
+
+// Here is the Union Master component that actually performs the simulation.
+// All components inserted before this will be before the filter, and after this will be after the filter.
+COMPONENT BIFROST_filter = Union_master(allow_inside_start=1)
+AT(0,0,0) RELATIVE sample_position
+ROTATED(0,0,0) RELATIVE sample_position
+EXTEND
+%{
+  n_scattering_events = number_of_scattering_events; // Store the number of scattering events for each neutron
+  // Other statistical information is available if necessary
+%}
+
+COMPONENT energy = E_monitor(
+  xwidth=0.05,yheight=0.05,
+  filename="energy_transmission.dat",Emin=1,Emax=10,nE=200,restore_neutron=1)
+AT (0,0,Filter_outer_radius+0.2) RELATIVE sample_position
+
+COMPONENT wavelength = L_monitor(
+  xwidth=0.05,yheight=0.05,
+  filename="wavelength_transmission.dat",Lmin=1,Lmax=100,nL=200,restore_neutron=1)
+AT (0,0,Filter_outer_radius+0.2) RELATIVE sample_position
+
+COMPONENT PSD = PSD_monitor(
+  xwidth=0.05,yheight=0.05,nx=200,ny=200,
+  filename="PSD_transmission.dat",restore_neutron=1)
+AT (0,0,Filter_outer_radius+0.2) RELATIVE sample_position
+
+
+END
+
