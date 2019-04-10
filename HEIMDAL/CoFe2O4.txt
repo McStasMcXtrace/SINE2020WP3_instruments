@@ -5,7 +5,15 @@
 # density   2.99    in [g/cm^3]
 # weight    486.15  in [g/mol] for Na2Ca3Al2F14
 # multiplicity 4    in [Na2Ca3Al2F14/unit cell]
-# Vc        1079.1  volume of unit cell in [A^3]
+#
+# Thes following data are OK and taken from Vesta UI:
+# co fe2 o4
+# Space Group: F d -3 m  (#227-2)
+# a =  8.35000 A      alpha = 90.0000     grid(x) = 16
+# b =  8.35000 A      beta = 90.0000    grid(y) = 16
+# c =  8.35000 A      gamma = 90.0000     grid(z) = 16
+#
+# Vc        582.1380  volume of unit cell in [A^3]
 #
 #
 #column_j 10
