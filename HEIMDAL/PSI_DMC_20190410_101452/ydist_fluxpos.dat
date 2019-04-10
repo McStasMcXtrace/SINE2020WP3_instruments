@@ -1,0 +1,46 @@
+# Format: McCode with text headers
+# URL: http://www.mccode.org
+# Creator: McStas 2.5 - Dec. 12, 2018
+# Instrument: PSI_DMC.instr
+# Ncount: 10000000
+# Trace: no
+# Gravitation: no
+# Seed: 1554901021
+# Directory: PSI_DMC_20190410_101452
+# Param: lambda=2.5666
+# Param: R=0.87
+# Param: R_curve=0.87
+# Param: filename=CoFe2O4.txt
+# Param: D_PHI=6
+# Param: SHIFT=0
+# Param: PACK=0.7
+# Param: Dw=0.8
+# Param: BARNS=1
+# Date: Wed Apr 10 10:15:04 2019 (1554884104)
+# type: array_1d(11)
+# Source: PSI_DMC (PSI_DMC.instr)
+# component: ydist_fluxpos
+# position: 0 0 47.8657
+# title: Linear PSD monitor
+# Ncount: 10000000
+# filename: ydist_fluxpos.dat
+# statistics: X0=4.25793e-05; dX=0.0343154;
+# signal: Min=3.17852e+06; Max=3.30812e+06; Mean=3.25428e+06;
+# values: 3.57971e+07 89956.5 784210
+# xvar: x
+# yvar: (I,I_err)
+# xlabel: x-Position [m]
+# ylabel: Intensity
+# xlimits: -0.06 0.06
+# variables: x I I_err N
+-0.05454545455 3178519.376 26815.22031 70686 
+-0.04363636364 3232558.747 27069.80124 71897 
+-0.03272727273 3229852.018 27041.67584 71298 
+-0.02181818182 3305769.304 27347.89584 70929 
+-0.01090909091 3284249.39 27209.39612 71211 
+0 3301743.682 27271.79079 71507 
+0.01090909091 3308120.684 27306.17343 71605 
+0.02181818182 3270990.967 27206.92979 71153 
+0.03272727273 3237754.104 27074.28112 71172 
+0.04363636364 3253200.42 27140.40263 71404 
+0.05454545455 3194345.813 26864.40079 71348 

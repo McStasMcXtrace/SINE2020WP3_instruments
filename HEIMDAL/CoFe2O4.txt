@@ -1,3 +1,13 @@
+# Physical parameters - FIXME!!! These were copied straght from NaCaAlF!!!
+# sigma_coh 70.890  coherent scattering cross section for Na2Ca3Al2F14 in [barn]
+# sigma_inc 3.4176  incoherent scattering cross section for Na2Ca3Al2F14 in [barn]
+# sigma_abs 2.9464  absorption scattering cross section for Na2Ca3Al2F14 in [barn]
+# density   2.99    in [g/cm^3]
+# weight    486.15  in [g/mol] for Na2Ca3Al2F14
+# multiplicity 4    in [Na2Ca3Al2F14/unit cell]
+# Vc        1079.1  volume of unit cell in [A^3]
+#
+#
 #column_j 10
 #column_d 4 
 #column_F 7
