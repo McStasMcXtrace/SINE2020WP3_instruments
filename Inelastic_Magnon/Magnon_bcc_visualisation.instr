@@ -31,7 +31,7 @@
 *******************************************************************************/
 
 /* Change name of instrument and input parameters with default values */
-DEFINE INSTRUMENT Magnon_bcc_visualisation(lambda=10, dlambda=9.9, Rotation=0, inelastic=0.7, aa=6.283185307179586,
+DEFINE INSTRUMENT Magnon_bcc_visualisation(lambda=10, dlambda=9.9, Rotation=0, inelastic=1, aa=6.283185307179586,
 					   sample_J1=2, sample_J2=0, TT=300, FerroMagnet=0, Verbose=0, imultiplier=1,IDX=-22,
 					   noPSD=1,energy_cuts=0)
 
@@ -93,7 +93,7 @@ EXTEND %{
 %}
 
 /* Ideal representation */
-  COMPONENT Sqqw = Sqq_w_monitor(filename="qa_vs_qb",nE=6,nqa=451,nqb=451,qamin=-4.5,qamax=4.5,qbmin=-4.5,qbmax=4.5,index=-2,Emin=0, Emax=16, yheight=0.1)
+  COMPONENT Sqqw = Sqq_w_monitor(filename="qa_vs_qb",nE=29,nqa=451,nqb=451,qamin=-4.5,qamax=4.5,qbmin=-4.5,qbmax=4.5,index=-2,Emin=-14, Emax=14, yheight=0.1)
   AT (0,0,0) RELATIVE Magnon
 
   COMPONENT det= PSD_monitor_4PI(radius=1.01, nx=360,ny=180,filename="psd",restore_neutron=1,nowritefile=noPSD)
@@ -195,7 +195,7 @@ COMPONENT Catchall = Arm ()
  AT (0,0,0) RELATIVE Arm9
 GROUP Slits
 EXTEND %{
-  SCATTER;
+  //SCATTER;
 %}
 
 COMPONENT Efilter = Arm ()
@@ -207,7 +207,7 @@ EXTEND %{
 
 
 /* non-deal representation */
-  COMPONENT Sqqw2 = Sqq_w_monitor(radius=1.1,filename="qa_vs_qb_2",nE=6,nqa=451,nqb=451,qamin=-4.5,qamax=4.5,qbmin=-4.5,qbmax=4.5,index=-24,Emin=0, Emax=16, yheight=0.1)
+  COMPONENT Sqqw2 = Sqq_w_monitor(radius=1.1,filename="qa_vs_qb_2",nE=29,nqa=451,nqb=451,qamin=-4.5,qamax=4.5,qbmin=-4.5,qbmax=4.5,index=-24,Emin=-14, Emax=14, yheight=0.1)
   AT (0,0,0) RELATIVE Magnon
 
   /*COMPONENT det1= PSD_monitor_4PI(radius=1.11, nx=360,ny=180,filename="psd1",restore_neutron=1,nowritefile=noPSD)
