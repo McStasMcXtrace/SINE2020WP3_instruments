@@ -1,0 +1,1667 @@
+McStas simulation description file for Magnon_bcc_visualisation.
+Date:    Mon May 13 13:45:04 2019
+Program: McStas 2.5 - Dec. 12, 2018
+
+begin instrument: Magnon_bcc_visualisation
+  File: Magnon_bcc_visualisation_20190513_130344/45/mccode
+  Source: Magnon_bcc_visualisation.instr
+  Parameters:  lambda(double) dlambda(double) Rotation(double) inelastic(double) aa(double) sample_J1(double) sample_J2(double) TT(double) FerroMagnet(double) Verbose(double) imultiplier(double) IDX(double) noPSD(double) energy_cuts(double) qcuts(double) length(double)
+  Trace_enabled: yes
+  Default_main: yes
+  Embedded_runtime: yes
+end instrument
+
+begin simulation: Magnon_bcc_visualisation_20190513_130344/45
+  Format: McCode with text headers
+  URL: http://www.mccode.org
+  Creator: McStas 2.5 - Dec. 12, 2018
+  Instrument: Magnon_bcc_visualisation.instr
+  Ncount: 10000000
+  Trace: no
+  Gravitation: no
+  Seed: 1557806445
+  Directory: Magnon_bcc_visualisation_20190513_130344/45
+  Nodes: 16
+  Param: lambda=5.75
+  Param: dlambda=4.25
+  Param: Rotation=45
+  Param: inelastic=1
+  Param: aa=6.28319
+  Param: sample_J1=2
+  Param: sample_J2=0
+  Param: TT=300
+  Param: FerroMagnet=0
+  Param: Verbose=0
+  Param: imultiplier=1
+  Param: IDX=-22
+  Param: noPSD=0
+  Param: energy_cuts=1
+  Param: qcuts=0
+  Param: length=162
+end simulation
+
+begin data
+  Date: Mon May 13 13:45:47 2019 (1557747947)
+  type: array_2d(256, 256)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: TofLambda_sample
+  position: 0 0 161.979
+  title: TOF-wavelength monitor
+  Ncount: 10000000
+  filename: TOFLambda_sample.dat
+  statistics: X0=235450; dX=100475; Y0=5.75044; dY=2.45386;
+  signal: Min=0; Max=1613.45; Mean=6.21039;
+  values: 407004 128.706 1e+07
+  xvar: Ti
+  yvar: Wa
+  xlabel: Time-of-flight [\gms]
+  ylabel: Wavelength [AA]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: 26617.6 444309 1.5 10
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:47 2019 (1557747947)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 0 ~ -14 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_0.dat
+  statistics: X0=-0.66256; dX=1.15016; Y0=-1.83697; dY=0.243904;
+  signal: Min=0; Max=1078.76; Mean=0.32619;
+  values: 66347.4 240.584 1.37958e+06
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:48 2019 (1557747948)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 1 ~ -13 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_1.dat
+  statistics: X0=-0.808153; dX=0.944733; Y0=-1.81062; dY=0.254004;
+  signal: Min=0; Max=1135.6; Mean=0.221923;
+  values: 45139.3 128.332 736268
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:48 2019 (1557747948)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 2 ~ -12 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2.dat
+  statistics: X0=-0.899826; dX=0.709089; Y0=-1.76834; dY=0.248514;
+  signal: Min=0; Max=1330; Mean=0.211929;
+  values: 43106.5 105.609 546810
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:48 2019 (1557747948)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 3 ~ -11 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_3.dat
+  statistics: X0=-1.06482; dX=0.740604; Y0=-1.63532; dY=0.306494;
+  signal: Min=0; Max=1236.14; Mean=0.264168;
+  values: 53732 93.5796 747875
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:48 2019 (1557747948)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 4 ~ -10 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_4.dat
+  statistics: X0=-1.68423; dX=0.965065; Y0=-1.14152; dY=0.162927;
+  signal: Min=0; Max=977.567; Mean=0.140804;
+  values: 28639.6 91.1998 225616
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:48 2019 (1557747948)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 5 ~ -9 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_5.dat
+  statistics: X0=-1.56826; dX=0.984005; Y0=-1.0831; dY=0.100198;
+  signal: Min=0; Max=1243.73; Mean=0.157884;
+  values: 32113.8 145.931 133490
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:48 2019 (1557747948)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 6 ~ -8 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_6.dat
+  statistics: X0=-1.45062; dX=0.957524; Y0=-1.02045; dY=0.102558;
+  signal: Min=0; Max=1366.47; Mean=0.229308;
+  values: 46641.4 174.222 146594
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:49 2019 (1557747949)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 7 ~ -7 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_7.dat
+  statistics: X0=-1.19977; dX=1.0134; Y0=-0.991432; dY=0.0915436;
+  signal: Min=0; Max=1193.4; Mean=0.28702;
+  values: 58380.2 198.205 185652
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:49 2019 (1557747949)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 8 ~ -6 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_8.dat
+  statistics: X0=-0.568379; dX=0.94124; Y0=-1.0147; dY=0.0752264;
+  signal: Min=0; Max=1446.26; Mean=0.333385;
+  values: 67810.8 271.59 110376
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:49 2019 (1557747949)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 9 ~ -5 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_9.dat
+  statistics: X0=-0.181178; dX=0.590713; Y0=-1.01975; dY=0.0593992;
+  signal: Min=0; Max=4387.61; Mean=0.679979;
+  values: 138308 472.676 230438
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:49 2019 (1557747949)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 10 ~ -4 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_10.dat
+  statistics: X0=-0.150641; dX=0.5245; Y0=-0.97097; dY=0.0377516;
+  signal: Min=0; Max=5835.88; Mean=0.585133;
+  values: 119017 589.128 188196
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:49 2019 (1557747949)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 11 ~ -3 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_11.dat
+  statistics: X0=-2.15957; dX=0.549536; Y0=-0.993797; dY=0.0442044;
+  signal: Min=0; Max=206.827; Mean=0.0212519;
+  values: 4322.66 190.889 2884
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:49 2019 (1557747949)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 12 ~ -2 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_12.dat
+  statistics: X0=-2.27297; dX=0.576945; Y0=-0.859241; dY=0.338573;
+  signal: Min=0; Max=287.977; Mean=0.0166218;
+  values: 3380.89 198.612 825
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:50 2019 (1557747950)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 13 ~ -1 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_13.dat
+  statistics: X0=-2.52747; dX=0.545129; Y0=-0.515551; dY=0.497562;
+  signal: Min=0; Max=381.553; Mean=0.0152186;
+  values: 3095.48 300.213 576
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:50 2019 (1557747950)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 14 ~ 0 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_14.dat
+  statistics: X0=-1.0105; dX=0.142146; Y0=-0.00452548; dY=0.0670445;
+  signal: Min=0; Max=30983.9; Mean=0.155576;
+  values: 31644.4 1619.57 1517
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:50 2019 (1557747950)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 15 ~ 1 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_15.dat
+  statistics: X0=-1.06723; dX=0.35793; Y0=-0.0162531; dY=0.128167;
+  signal: Min=0; Max=15866.7; Mean=0.253745;
+  values: 51612.1 580.485 16979
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:50 2019 (1557747950)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 16 ~ 2 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_16.dat
+  statistics: X0=-1.13511; dX=0.494708; Y0=-0.0147427; dY=0.12485;
+  signal: Min=0; Max=2057.41; Mean=0.118506;
+  values: 24104.2 262.985 19957
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:50 2019 (1557747950)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 17 ~ 3 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_17.dat
+  statistics: X0=-1.19294; dX=0.588299; Y0=-0.00190293; dY=0.0692522;
+  signal: Min=0; Max=539.926; Mean=0.0682344;
+  values: 13878.9 130.18 28505
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:50 2019 (1557747950)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 18 ~ 4 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_18.dat
+  statistics: X0=-1.32606; dX=0.738669; Y0=0.00280051; dY=0.0531349;
+  signal: Min=0; Max=227.74; Mean=0.0409053;
+  values: 8320.17 75.4617 226375
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:51 2019 (1557747951)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 19 ~ 5 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_19.dat
+  statistics: X0=-1.44909; dX=0.831596; Y0=0.00485844; dY=0.0747692;
+  signal: Min=0; Max=110.892; Mean=0.0268248;
+  values: 5456.18 51.6894 208433
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:51 2019 (1557747951)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 20 ~ 6 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_20.dat
+  statistics: X0=-1.52614; dX=0.879758; Y0=0.00792288; dY=0.0964027;
+  signal: Min=0; Max=67.6639; Mean=0.0188887;
+  values: 3841.99 38.6834 90496
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:51 2019 (1557747951)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 21 ~ 7 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_21.dat
+  statistics: X0=-1.58727; dX=0.883966; Y0=0.0548141; dY=0.21885;
+  signal: Min=0; Max=36.9309; Mean=0.0147409;
+  values: 2998.31 30.6043 63947
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:51 2019 (1557747951)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 22 ~ 8 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_22.dat
+  statistics: X0=-1.72238; dX=0.88923; Y0=0.13466; dY=0.324122;
+  signal: Min=0; Max=25.4385; Mean=0.012989;
+  values: 2641.97 26.7201 68949
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:51 2019 (1557747951)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 23 ~ 9 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_23.dat
+  statistics: X0=-1.91216; dX=0.87726; Y0=0.225856; dY=0.383088;
+  signal: Min=0; Max=16.9457; Mean=0.00993691;
+  values: 2021.18 20.3141 67566
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:51 2019 (1557747951)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 24 ~ 10 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_24.dat
+  statistics: X0=-2.03649; dX=0.844414; Y0=0.312045; dY=0.430892;
+  signal: Min=0; Max=12.6137; Mean=0.00863188;
+  values: 1755.73 19.1797 72399
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:52 2019 (1557747952)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 25 ~ 11 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_25.dat
+  statistics: X0=-2.18558; dX=0.856837; Y0=0.369036; dY=0.450612;
+  signal: Min=0; Max=11.0168; Mean=0.00793666;
+  values: 1614.32 15.2856 70346
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:52 2019 (1557747952)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 26 ~ 12 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_26.dat
+  statistics: X0=-2.27205; dX=0.871402; Y0=0.394397; dY=0.458045;
+  signal: Min=0; Max=9.98389; Mean=0.00777027;
+  values: 1580.48 17.5083 68263
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:52 2019 (1557747952)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 27 ~ 13 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_27.dat
+  statistics: X0=-2.37235; dX=0.862807; Y0=0.426596; dY=0.46051;
+  signal: Min=0; Max=7.45653; Mean=0.00780797;
+  values: 1588.15 12.9813 70913
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:52 2019 (1557747952)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw
+  position: 0 0 162
+  title: qa vs qb monitor E slice 28 ~ 14 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_28.dat
+  statistics: X0=-2.42314; dX=0.857974; Y0=0.46302; dY=0.46318;
+  signal: Min=0; Max=9.89112; Mean=0.00809571;
+  values: 1646.68 15.0513 109646
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:52 2019 (1557747952)
+  type: array_2d(360, 180)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: det
+  position: 0 0 162
+  title: 4PI PSD monitor
+  Ncount: 10000000
+  filename: psd.dat
+  statistics: X0=1.29514; dX=25.1224; Y0=0.497263; dY=1.4409;
+  signal: Min=0; Max=9046.07; Mean=17.9392;
+  values: 1.16246e+06 2036.3 1e+07
+  xvar: Lo
+  yvar: La
+  xlabel: Longitude [deg]
+  ylabel: Lattitude [deg]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -180 180 -90 90
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:52 2019 (1557747952)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 0 ~ -14 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_0.dat
+  statistics: X0=0; dX=0; Y0=0; dY=0;
+  signal: Min=0; Max=0; Mean=0;
+  values: 0 0 0
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:52 2019 (1557747952)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 1 ~ -13 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_1.dat
+  statistics: X0=0; dX=0; Y0=0; dY=0;
+  signal: Min=0; Max=0; Mean=0;
+  values: 0 0 0
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:53 2019 (1557747953)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 2 ~ -12 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_2.dat
+  statistics: X0=0; dX=0; Y0=0; dY=0;
+  signal: Min=0; Max=0; Mean=0;
+  values: 0 0 0
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:53 2019 (1557747953)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 3 ~ -11 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_3.dat
+  statistics: X0=0; dX=0; Y0=0; dY=0;
+  signal: Min=0; Max=0; Mean=0;
+  values: 0 0 0
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:53 2019 (1557747953)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 4 ~ -10 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_4.dat
+  statistics: X0=0; dX=0; Y0=0; dY=0;
+  signal: Min=0; Max=0; Mean=0;
+  values: 0 0 0
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:53 2019 (1557747953)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 5 ~ -9 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_5.dat
+  statistics: X0=0; dX=0; Y0=0; dY=0;
+  signal: Min=0; Max=0; Mean=0;
+  values: 0 0 0
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:53 2019 (1557747953)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 6 ~ -8 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_6.dat
+  statistics: X0=-1.89992; dX=0.0337121; Y0=-0.905822; dY=0.0352832;
+  signal: Min=0; Max=240.403; Mean=0.00820704;
+  values: 1669.32 15.6625 11449
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:53 2019 (1557747953)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 7 ~ -7 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_7.dat
+  statistics: X0=-1.90301; dX=0.0250107; Y0=-0.901497; dY=0.0242144;
+  signal: Min=0; Max=870.92; Mean=0.0261735;
+  values: 5323.72 28.0478 36216
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:54 2019 (1557747954)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 8 ~ -6 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_8.dat
+  statistics: X0=0.0242431; dX=0.0672613; Y0=-1.0644; dY=0.0452805;
+  signal: Min=0; Max=333.846; Mean=0.0402128;
+  values: 8179.32 111.084 9208
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:54 2019 (1557747954)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 9 ~ -5 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_9.dat
+  statistics: X0=-0.0102076; dX=0.148696; Y0=-1.02985; dY=0.0565108;
+  signal: Min=0; Max=1914.16; Mean=0.24044;
+  values: 48905.7 276.045 75664
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:54 2019 (1557747954)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 10 ~ -4 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_10.dat
+  statistics: X0=-0.0271582; dX=0.135597; Y0=-0.970956; dY=0.0363873;
+  signal: Min=0; Max=3481.83; Mean=0.313167;
+  values: 63698.4 458.511 83377
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:54 2019 (1557747954)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 11 ~ -3 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_11.dat
+  statistics: X0=0; dX=0; Y0=0; dY=0;
+  signal: Min=0; Max=0; Mean=0;
+  values: 0 0 0
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:54 2019 (1557747954)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 12 ~ -2 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_12.dat
+  statistics: X0=0; dX=0; Y0=0; dY=0;
+  signal: Min=0; Max=0; Mean=0;
+  values: 0 0 0
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:54 2019 (1557747954)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 13 ~ -1 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_13.dat
+  statistics: X0=-1.99429; dX=0.00487415; Y0=0.00426724; dY=0.00818207;
+  signal: Min=0; Max=0.0579203; Mean=3.94159e-07;
+  values: 0.0801724 0.0116212 48
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:54 2019 (1557747954)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 14 ~ 0 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_14.dat
+  statistics: X0=-1.99557; dX=0; Y0=0; dY=0;
+  signal: Min=0; Max=0.062941; Mean=3.09443e-07;
+  values: 0.062941 0.0136024 25
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:55 2019 (1557747955)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 15 ~ 1 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_15.dat
+  statistics: X0=-1.99812; dX=0.0148246; Y0=0.00293388; dY=0.0176285;
+  signal: Min=0; Max=0.637957; Mean=9.17915e-06;
+  values: 1.86705 0.0799471 578
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:55 2019 (1557747955)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 16 ~ 2 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_16.dat
+  statistics: X0=-1.00467; dX=0.0862248; Y0=-0.0275355; dY=0.0130667;
+  signal: Min=0; Max=231.301; Mean=0.00648795;
+  values: 1319.66 42.7641 3100
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:55 2019 (1557747955)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 17 ~ 3 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_17.dat
+  statistics: X0=-1.00233; dX=0.0660975; Y0=-0.00129744; dY=0.0343392;
+  signal: Min=0; Max=280.008; Mean=0.0285664;
+  values: 5810.43 82.3553 12826
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:55 2019 (1557747955)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 18 ~ 4 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_18.dat
+  statistics: X0=-1.00805; dX=0.104342; Y0=0.00475925; dY=0.0463128;
+  signal: Min=0; Max=115.939; Mean=0.0166977;
+  values: 3396.34 41.4842 14424
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:55 2019 (1557747955)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 19 ~ 5 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_19.dat
+  statistics: X0=-1.02962; dX=0.142437; Y0=0.0293864; dY=0.0560631;
+  signal: Min=0; Max=58.7741; Mean=0.00742622;
+  values: 1510.5 22.6785 9431
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:55 2019 (1557747955)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 20 ~ 6 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_20.dat
+  statistics: X0=-1.09607; dX=0.248754; Y0=0.0692654; dY=0.044231;
+  signal: Min=0; Max=20.7254; Mean=0.00209149;
+  values: 425.41 11.5616 5030
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:56 2019 (1557747956)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 21 ~ 7 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_21.dat
+  statistics: X0=-1.16114; dX=0.306383; Y0=0.0965594; dY=0.0472878;
+  signal: Min=0; Max=11.2561; Mean=0.000975353;
+  values: 198.388 5.47548 2816
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:56 2019 (1557747956)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 22 ~ 8 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_22.dat
+  statistics: X0=-1.99883; dX=0.117453; Y0=0.0690261; dY=0.0653683;
+  signal: Min=0; Max=0.675521; Mean=7.41575e-05;
+  values: 15.0837 0.674003 728
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:56 2019 (1557747956)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 23 ~ 9 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_23.dat
+  statistics: X0=-2.06908; dX=0.38817; Y0=0.221446; dY=0.255317;
+  signal: Min=0; Max=1.65075; Mean=8.26365e-05;
+  values: 16.8084 1.49205 1585
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:56 2019 (1557747956)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 24 ~ 10 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_24.dat
+  statistics: X0=-2.07357; dX=0.716034; Y0=0.510477; dY=0.328547;
+  signal: Min=0; Max=0.94294; Mean=0.000146625;
+  values: 29.8236 0.671666 6243
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:56 2019 (1557747956)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 25 ~ 11 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_25.dat
+  statistics: X0=-2.12376; dX=0.871328; Y0=0.70264; dY=0.257574;
+  signal: Min=0; Max=0.754797; Mean=0.000167898;
+  values: 34.1506 0.590541 6977
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:56 2019 (1557747956)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 26 ~ 12 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_26.dat
+  statistics: X0=-2.0372; dX=0.51976; Y0=0.733403; dY=0.178506;
+  signal: Min=0; Max=3.08711; Mean=0.000550697;
+  values: 112.012 1.52492 9509
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:57 2019 (1557747957)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 27 ~ 13 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_27.dat
+  statistics: X0=-2.06568; dX=0.536159; Y0=0.740844; dY=0.180985;
+  signal: Min=0; Max=2.99999; Mean=0.000869858;
+  values: 176.93 2.07283 12735
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:57 2019 (1557747957)
+  type: array_2d(451, 451)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Sqqw2
+  position: 0 0 162
+  title: qa vs qb monitor E slice 28 ~ 14 meV
+  Ncount: 10000000
+  filename: qa_vs_qb_2_28.dat
+  statistics: X0=-2.16392; dX=0.616532; Y0=0.787232; dY=0.147372;
+  signal: Min=0; Max=2.43345; Mean=0.00106906;
+  values: 217.448 2.21663 18171
+  xvar: qa
+  yvar: qb
+  xlabel: qa [AA^-1]
+  ylabel: qb [AA^-1]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -4.5 4.5 -4.5 4.5
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:57 2019 (1557747957)
+  type: array_2d(180, 21)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Banana
+  position: 0 0 162
+  title:  Intensity Angle Position Monitor (Banana) [out] per bin
+  Ncount: 10000000
+  filename: Banana_1557747905.th_y
+  statistics: X0=30.2722; dX=15.5159; Y0=-0.000145936; dY=0.0282673;
+  signal: Min=0; Max=1696.31; Mean=34.6168;
+  values: 130851 526.392 345807
+  xvar: Lo
+  yvar: y 
+  xlabel: Longitude [deg]
+  ylabel: y [m]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: 0 180 -0.1 0.1
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:57 2019 (1557747957)
+  type: array_2d(6, 1540)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Banana_all
+  position: 0 0 162
+  title:  Intensity Energy  Angle Time_Of_Flight  Monitor (Banana) [out]
+  Ncount: 10000000
+  filename: Events_all_list.p.E.U2.th.t.U1
+  statistics: X0=0; dX=0; Y0=0; dY=0;
+  signal: Min=0.0264047; Max=0.0264047; Mean=0;
+  values: 0 0 0
+  xvar: Li
+  yvar: p 
+  xlabel: List of neutron events
+  ylabel: p E U2 th t U1 
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: 1 1540 1 6
+  variables: p E U2 th t U1 
+end data
+
+begin data
+  Date: Mon May 13 13:45:57 2019 (1557747957)
+  type: array_2d(6, 429)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Banana2_5
+  position: 0 0 162
+  title:  Intensity Energy  Angle Time_Of_Flight  Monitor (on PREVIOUS)
+  Ncount: 10000000
+  filename: Events2_5_list.p.E.U2.th.t.U1
+  statistics: X0=0; dX=0; Y0=0; dY=0;
+  signal: Min=0.0264047; Max=0.0264047; Mean=0;
+  values: 0 0 0
+  xvar: Li
+  yvar: p 
+  xlabel: List of neutron events
+  ylabel: p E U2 th t U1 
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: 1 429 1 6
+  variables: p E U2 th t U1 
+end data
+
+begin data
+  Date: Mon May 13 13:45:57 2019 (1557747957)
+  type: array_2d(6, 455)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Banana2_8
+  position: 0 0 162
+  title:  Intensity Energy  Angle Time_Of_Flight  Monitor (on PREVIOUS)
+  Ncount: 10000000
+  filename: Events2_8_list.p.E.U2.th.t.U1
+  statistics: X0=0; dX=0; Y0=0; dY=0;
+  signal: Min=0.0189836; Max=0.0189836; Mean=0;
+  values: 0 0 0
+  xvar: Li
+  yvar: p 
+  xlabel: List of neutron events
+  ylabel: p E U2 th t U1 
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: 1 455 1 6
+  variables: p E U2 th t U1 
+end data
+
+begin data
+  Date: Mon May 13 13:45:57 2019 (1557747957)
+  type: array_2d(6, 428)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Banana3_1
+  position: 0 0 162
+  title:  Intensity Energy  Angle Time_Of_Flight  Monitor (on PREVIOUS)
+  Ncount: 10000000
+  filename: Events3_1_list.p.E.U2.th.t.U1
+  statistics: X0=0; dX=0; Y0=0; dY=0;
+  signal: Min=0.0122941; Max=0.0122941; Mean=0;
+  values: 0 0 0
+  xvar: Li
+  yvar: p 
+  xlabel: List of neutron events
+  ylabel: p E U2 th t U1 
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: 1 428 1 6
+  variables: p E U2 th t U1 
+end data
+
+begin data
+  Date: Mon May 13 13:45:57 2019 (1557747957)
+  type: array_2d(6, 463)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Banana3_5
+  position: 0 0 162
+  title:  Intensity Energy  Angle Time_Of_Flight  Monitor (on PREVIOUS)
+  Ncount: 10000000
+  filename: Events3_5_list.p.E.U2.th.t.U1
+  statistics: X0=0; dX=0; Y0=0; dY=0;
+  signal: Min=0.0060954; Max=0.0060954; Mean=0;
+  values: 0 0 0
+  xvar: Li
+  yvar: p 
+  xlabel: List of neutron events
+  ylabel: p E U2 th t U1 
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: 1 463 1 6
+  variables: p E U2 th t U1 
+end data
+
+begin data
+  Date: Mon May 13 13:45:57 2019 (1557747957)
+  type: array_2d(6, 424)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Banana4_0
+  position: 0 0 162
+  title:  Intensity Energy  Angle Time_Of_Flight  Monitor (on PREVIOUS)
+  Ncount: 10000000
+  filename: Events4_0_list.p.E.U2.th.t.U1
+  statistics: X0=0; dX=0; Y0=0; dY=0;
+  signal: Min=0.0675204; Max=0.0675204; Mean=0;
+  values: 0 0 0
+  xvar: Li
+  yvar: p 
+  xlabel: List of neutron events
+  ylabel: p E U2 th t U1 
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: 1 424 1 6
+  variables: p E U2 th t U1 
+end data
+
+begin data
+  Date: Mon May 13 13:45:57 2019 (1557747957)
+  type: array_2d(6, 453)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Banana4_5
+  position: 0 0 162
+  title:  Intensity Energy  Angle Time_Of_Flight  Monitor (on PREVIOUS)
+  Ncount: 10000000
+  filename: Events4_5_list.p.E.U2.th.t.U1
+  statistics: X0=0; dX=0; Y0=0; dY=0;
+  signal: Min=0.0160817; Max=0.0160817; Mean=0;
+  values: 0 0 0
+  xvar: Li
+  yvar: p 
+  xlabel: List of neutron events
+  ylabel: p E U2 th t U1 
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: 1 453 1 6
+  variables: p E U2 th t U1 
+end data
+
+begin data
+  Date: Mon May 13 13:45:57 2019 (1557747957)
+  type: array_2d(6, 650)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Banana5_0
+  position: 0 0 162
+  title:  Intensity Energy  Angle Time_Of_Flight  Monitor (on PREVIOUS)
+  Ncount: 10000000
+  filename: Events5_0_list.p.E.U2.th.t.U1
+  statistics: X0=0; dX=0; Y0=0; dY=0;
+  signal: Min=0.0285889; Max=0.0285889; Mean=0;
+  values: 0 0 0
+  xvar: Li
+  yvar: p 
+  xlabel: List of neutron events
+  ylabel: p E U2 th t U1 
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: 1 650 1 6
+  variables: p E U2 th t U1 
+end data
+
+begin data
+  Date: Mon May 13 13:45:57 2019 (1557747957)
+  type: array_2d(6, 1186)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Banana5_5
+  position: 0 0 162
+  title:  Intensity Energy  Angle Time_Of_Flight  Monitor (on PREVIOUS)
+  Ncount: 10000000
+  filename: Events5_5_list.p.E.U2.th.t.U1
+  statistics: X0=0; dX=0; Y0=0; dY=0;
+  signal: Min=0.0032299; Max=0.0032299; Mean=0;
+  values: 0 0 0
+  xvar: Li
+  yvar: p 
+  xlabel: List of neutron events
+  ylabel: p E U2 th t U1 
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: 1 1186 1 6
+  variables: p E U2 th t U1 
+end data
+
+begin data
+  Date: Mon May 13 13:45:57 2019 (1557747957)
+  type: array_2d(6, 858)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Banana6_5
+  position: 0 0 162
+  title:  Intensity Energy  Angle Time_Of_Flight  Monitor (on PREVIOUS)
+  Ncount: 10000000
+  filename: Events6_5_list.p.E.U2.th.t.U1
+  statistics: X0=0; dX=0; Y0=0; dY=0;
+  signal: Min=0.00517371; Max=0.00517371; Mean=0;
+  values: 0 0 0
+  xvar: Li
+  yvar: p 
+  xlabel: List of neutron events
+  ylabel: p E U2 th t U1 
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: 1 858 1 6
+  variables: p E U2 th t U1 
+end data
+
+begin data
+  Date: Mon May 13 13:45:57 2019 (1557747957)
+  type: array_2d(6, 853)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Banana8_0
+  position: 0 0 162
+  title:  Intensity Energy  Angle Time_Of_Flight  Monitor (on PREVIOUS)
+  Ncount: 10000000
+  filename: Events8_0_list.p.E.U2.th.t.U1
+  statistics: X0=0; dX=0; Y0=0; dY=0;
+  signal: Min=0.0226564; Max=0.0226564; Mean=0;
+  values: 0 0 0
+  xvar: Li
+  yvar: p 
+  xlabel: List of neutron events
+  ylabel: p E U2 th t U1 
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: 1 853 1 6
+  variables: p E U2 th t U1 
+end data
+
+begin data
+  Date: Mon May 13 13:45:57 2019 (1557747957)
+  type: array_2d(360, 180)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: det1
+  position: 0 0 162
+  title: 4PI PSD monitor
+  Ncount: 10000000
+  filename: psd1.dat
+  statistics: X0=-14.9174; dX=15.025; Y0=0.489828; dY=1.46822;
+  signal: Min=0; Max=3911.06; Mean=2.19426;
+  values: 142188 557.629 367845
+  xvar: Lo
+  yvar: La
+  xlabel: Longitude [deg]
+  ylabel: Lattitude [deg]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -180 180 -90 90
+  variables: I I_err N
+end data
+
+begin data
+  Date: Mon May 13 13:45:57 2019 (1557747957)
+  type: array_1d(301)
+  Source: Magnon_bcc_visualisation (Magnon_bcc_visualisation.instr)
+  component: Delta_t0
+  position: 0 0 162
+  title: Delta t monitor
+  Ncount: 10000000
+  filename: deltat.U1
+  statistics: X0=0.00115255; dX=0.000304554;
+  signal: Min=0; Max=6731.31; Mean=472.385;
+  values: 142188 557.629 367845
+  xvar: U1
+  yvar: (I,I_err)
+  xlabel: Delta t
+  ylabel: Intensity [n/s/bin]
+  xlimits: 0 0.003
+  variables: U1 I I_err N
+end data

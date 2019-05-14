@@ -1,0 +1,27 @@
+begin instrument:
+  Creator: mcstas 2.5
+  Source: Magnon_bcc_visualisation.instr
+  Parameters:  Rotation
+  Trace_enabled: no
+  Default_main: yes
+  Embedded_runtime: yes
+end instrument
+
+begin simulation
+Date: Mon May 13 13 04 2019
+Ncount: 10000000
+Numpoints: 2
+Param: Rotation = 0, Rotation = 89
+end simulation
+
+begin data
+type: multiarray_1d(2)
+title: Scan of Rotation
+xvars: Rotation
+yvars: (TofLambda_sample_I,TofLambda_sample_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (Sqqw_I,Sqqw_ERR) (det_I,det_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Sqqw2_I,Sqqw2_ERR) (Banana_I,Banana_ERR) (det1_I,det1_ERR) (Delta_t0_I,Delta_t0_ERR)
+xlabel: 'Rotation'
+ylabel: 'Intensity'
+xlimits: 0 89
+filename: mccode.dat
+variables: Rotation TofLambda_sample_I TofLambda_sample_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR Sqqw_I Sqqw_ERR det_I det_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Sqqw2_I Sqqw2_ERR Banana_I Banana_ERR det1_I det1_ERR Delta_t0_I Delta_t0_ERR
+end data
