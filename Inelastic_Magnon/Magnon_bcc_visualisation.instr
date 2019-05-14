@@ -31,15 +31,34 @@
 *******************************************************************************/
 
 /* Change name of instrument and input parameters with default values */
-DEFINE INSTRUMENT Magnon_bcc_visualisation(lambda=10, dlambda=9.9, Rotation=0, inelastic=1, aa=6.283185307179586,
+DEFINE INSTRUMENT Magnon_bcc_visualisation(lambda=5.75, dlambda=4.25, Rotation=0, inelastic=1, aa=6.283185307179586,
 					   sample_J1=2, sample_J2=0, TT=300, FerroMagnet=0, Verbose=0, imultiplier=1,IDX=-22,
-					   noPSD=1,energy_cuts=0)
+					   noPSD=0,energy_cuts=1,qcuts=0,length=162)
 
 DECLARE %{
   double Samplechoice;
   double Energy;
+  double wavelength;
   int Detectable;
+  double Eband;
+  double tarrival=0;
+  double dt,deltat;
+  double lmin,lmax;
+  double vmin,vmax, vthis;
+  double Ei;
+  double ttravelmin,ttravelmax;
 %}
+
+INITIALIZE %{
+  lmin=lambda-dlambda;
+  lmax=lambda+dlambda;
+  vmin=K2V*(2*PI)/lmax;
+  vmax=K2V*(2*PI)/lmin;
+  ttravelmin=length/vmax;
+  ttravelmax=length/vmin;
+  dt=ttravelmax-ttravelmin;
+  printf("ttravelmin: %g, ttravelmax: %g, delta: %g\n",ttravelmin,ttravelmax,dt);
+%}  
 
 TRACE
 
@@ -47,15 +66,24 @@ COMPONENT Origin = Progress_bar()
   AT (0,0,0) ABSOLUTE
 
 COMPONENT source = Source_simple(
-  radius=0.02, focus_xw=0.01, focus_yh=0.01, target_index=1,
+  radius=0.02, focus_xw=0.01, focus_yh=0.01, target_index=2,
   lambda0=lambda, dlambda=dlambda, flux=1e12)
 AT (0,0,0) ABSOLUTE
 EXTEND %{
   Samplechoice=rand01();
   Detectable=0;
+  Eband=0;
+  vthis=sqrt(vx*vx + vy*vy + vz*vz);
+  wavelength=(2*PI)/(V2K*sqrt(vx*vx + vy*vy + vz*vz));
+  Ei=VS2E*vthis*vthis;
 %}
 
-
+  COMPONENT TofLambda_sample = TOFLambda_monitor(filename="TOFLambda_sample", nt=256, nL=256, xwidth=0.04, yheight=0.03, tmin=1e6*(ttravelmin-0.1*dt), tmax=1e6*(ttravelmax+0.1*dt), Lmin=lmin, Lmax=lmax)
+  AT (0,0,length-0.021) RELATIVE source
+EXTEND %{
+   tarrival=t;
+%}
+  
 COMPONENT Magnon = Magnon_bcc(
     radius=0.02,
     yheight=0.03,
@@ -70,21 +98,22 @@ COMPONENT Magnon = Magnon_bcc(
     verbose=Verbose, 
     T=TT, 
     FM = FerroMagnet,
-    target_index=8,
-    focus_xw=0, 
-    focus_yh=0,
-    focus_aw=180, /* For statistics considerations, only a small angular */
-    focus_ah=0.1)   /* band arround sample is illuminated */
-  WHEN (inelastic>0 && Samplechoice<inelastic)  AT (0, 0, 5.1) RELATIVE source
+    target_index=17,
+    focus_xw=2, 
+    focus_yh=0.1,
+    focus_aw=0, /* For statistics considerations, only a small angular */
+    focus_ah=0)   /* band arround sample is illuminated */
+  WHEN (inelastic>0 && Samplechoice<inelastic)  AT (0, 0, length) RELATIVE source
   ROTATED (0, Rotation, 0) RELATIVE source
 EXTEND %{
    p/=mcipinelastic;
    p*=mcipimultiplier;
+   if(!SCATTERED) ABSORB;
 %}
 
 
   COMPONENT Lattice = Arm()
-  WHEN (inelastic<1 && Samplechoice>=inelastic) AT ( 0, 0, 5.1) RELATIVE source
+  WHEN (inelastic<1 && Samplechoice>=inelastic) AT ( 0, 0, length) RELATIVE source
   ROTATED (0, Rotation, 0) RELATIVE source
 EXTEND %{
    p/=(1-mcipinelastic);
@@ -140,62 +169,62 @@ EXTEND %{
     /* Check particle energy */
 if (mcipenergy_cuts==1) {
     Energy = VS2E*(  vx*vx +  vy*vy +    vz*vz);
-    if ((fabs(Energy-2.5)/2.5)<0.03) Detectable=1;
-    if ((fabs(Energy-2.8)/2.8)<0.03) Detectable=1;
-    if ((fabs(Energy-3.1)/3.1)<0.03) Detectable=1;
-    if ((fabs(Energy-3.5)/3.5)<0.03) Detectable=1;
-    if ((fabs(Energy-4.0)/4.0)<0.03) Detectable=1;
-    if ((fabs(Energy-4.5)/4.5)<0.03) Detectable=1;
-    if ((fabs(Energy-5.0)/5.0)<0.03) Detectable=1;
-    if ((fabs(Energy-5.5)/5.5)<0.03) Detectable=1;
-    if ((fabs(Energy-6.5)/6.5)<0.03) Detectable=1;
-    if ((fabs(Energy-8.0)/8.0)<0.03) Detectable=1;
+    if ((fabs(Energy-2.5)/2.5)<0.03) {Detectable=1; Eband=2.5;}
+    if ((fabs(Energy-2.8)/2.8)<0.03) {Detectable=1; Eband=2.8;}
+    if ((fabs(Energy-3.1)/3.1)<0.03) {Detectable=1; Eband=3.1;}
+    if ((fabs(Energy-3.5)/3.5)<0.03) {Detectable=1; Eband=3.5;}
+    if ((fabs(Energy-4.0)/4.0)<0.03) {Detectable=1; Eband=4.0;}
+    if ((fabs(Energy-4.5)/4.5)<0.03) {Detectable=1; Eband=4.5;}
+    if ((fabs(Energy-5.0)/5.0)<0.03) {Detectable=1; Eband=5.0;}
+    if ((fabs(Energy-5.5)/5.5)<0.03) {Detectable=1; Eband=5.5;}
+    if ((fabs(Energy-6.5)/6.5)<0.03) {Detectable=1; Eband=6.5;}
+    if ((fabs(Energy-8.0)/8.0)<0.03) {Detectable=1; Eband=8.0;}
     if(!Detectable) ABSORB;
 }
 %}
 
     
 COMPONENT Slit1 = Slit(xwidth=0.05, yheight=0.05)
-AT (0,0,1.01) RELATIVE Arm1
+WHEN (qcuts==1) AT (0,0,1.01) RELATIVE Arm1
 GROUP Slits
 
 COMPONENT Slit2 = Slit(xwidth=0.05, yheight=0.05)
-AT (0,0,1.01) RELATIVE Arm2
+WHEN (qcuts==1) AT (0,0,1.01) RELATIVE Arm2
 GROUP Slits
 
 COMPONENT Slit3 = Slit(xwidth=0.05, yheight=0.05)
-AT (0,0,1.01) RELATIVE Arm3
+WHEN (qcuts==1) AT (0,0,1.01) RELATIVE Arm3
 GROUP Slits
 
   COMPONENT Slit4 = Slit(xwidth=0.05, yheight=0.05)
-AT (0,0,1.01) RELATIVE Arm4
+WHEN (qcuts==1) AT (0,0,1.01) RELATIVE Arm4
 GROUP Slits
 
 COMPONENT Slit5 = Slit(xwidth=0.05, yheight=0.05)
-AT (0,0,1.01) RELATIVE Arm5
+WHEN (qcuts==1) AT (0,0,1.01) RELATIVE Arm5
 GROUP Slits
 
   COMPONENT Slit6 = Slit(xwidth=0.05, yheight=0.05)
-AT (0,0,1.01) RELATIVE Arm6
+WHEN (qcuts==1) AT (0,0,1.01) RELATIVE Arm6
 GROUP Slits
   
 COMPONENT Slit7 = Slit(xwidth=0.05, yheight=0.05)
-AT (0,0,1.01) RELATIVE Arm7
+WHEN (qcuts==1) AT (0,0,1.01) RELATIVE Arm7
 GROUP Slits
 
-  COMPONENT Slit8 = Slit(xwidth=0.05, yheight=0.05)
-AT (0,0,1.01) RELATIVE Arm8
+COMPONENT Slit8 = Slit(xwidth=0.05, yheight=0.05)
+WHEN (qcuts==1) AT (0,0,1.01) RELATIVE Arm8
 GROUP Slits
 
 COMPONENT Slit9 = Slit(xwidth=0.05, yheight=0.05)
-AT (0,0,1.01) RELATIVE Arm9
+WHEN (qcuts==1) AT (0,0,1.01) RELATIVE Arm9
 GROUP Slits
  
 COMPONENT Catchall = Arm ()
  AT (0,0,0) RELATIVE Arm9
 GROUP Slits
 EXTEND %{
-  //SCATTER;
+   if (mcipqcuts==0) SCATTER;
 %}
 
 COMPONENT Efilter = Arm ()
@@ -206,11 +235,59 @@ EXTEND %{
 
 
 
-/* non-deal representation */
+/* non-ideal representation */
   COMPONENT Sqqw2 = Sqq_w_monitor(radius=1.1,filename="qa_vs_qb_2",nE=29,nqa=451,nqb=451,qamin=-4.5,qamax=4.5,qbmin=-4.5,qbmax=4.5,index=-24,Emin=-14, Emax=14, yheight=0.1)
   AT (0,0,0) RELATIVE Magnon
 
-  /*COMPONENT det1= PSD_monitor_4PI(radius=1.11, nx=360,ny=180,filename="psd1",restore_neutron=1,nowritefile=noPSD)
-    AT (0,0,0) RELATIVE Magnon*/
+/* Banana-shaped detector for propagation to distance of 1.2 m */
+  COMPONENT Banana = Monitor_nD(xwidth=2.4, yheight=0.1, options="banana theta limits=[0 180] bins=180, y limits=[-0.1 0.1] bins=21")
+  AT (0,0,0) RELATIVE Magnon
+  ROTATED (0,0,0) RELATIVE source
+  EXTEND %{
+    deltat=t-tarrival;
+    if (deltat==0) ABSORB;
+    //printf("delta t %g\n",deltat);
+  %}
+  
+  /* Event-monitors */
+  COMPONENT Banana_all = Monitor_nD(xwidth=2.4, yheight=0.1, options="banana energy user2  theta t user1 list all neutrons", user1=tarrival, user2=Ei, filename="Events_all")
+  AT (0,0,0) RELATIVE Banana
+
+  COMPONENT Banana2_5 = Monitor_nD(xwidth=2.4, yheight=0.1, options="banana previous energy user2  theta t user1 list all neutrons", user1=tarrival, user2=Ei, filename="Events2_5")
+  WHEN (Eband == 2.5) AT (0,0,0) RELATIVE Banana
+
+  COMPONENT Banana2_8 = Monitor_nD(xwidth=2.4, yheight=0.1, options="banana previous energy user2  theta t user1 list all neutrons", user1=tarrival, user2=Ei, filename="Events2_8")
+  WHEN (Eband == 2.8) AT (0,0,0) RELATIVE Banana
+
+  COMPONENT Banana3_1 = Monitor_nD(xwidth=2.4, yheight=0.1, options="banana previous energy user2  theta t user1 list all neutrons", user1=tarrival, user2=Ei, filename="Events3_1")
+  WHEN (Eband == 3.1) AT (0,0,0) RELATIVE Banana
+
+  COMPONENT Banana3_5 = Monitor_nD(xwidth=2.4, yheight=0.1, options="banana previous energy user2  theta t user1 list all neutrons", user1=tarrival, user2=Ei, filename="Events3_5")
+  WHEN (Eband == 3.5) AT (0,0,0) RELATIVE Banana
+  
+  COMPONENT Banana4_0 = Monitor_nD(xwidth=2.4, yheight=0.1, options="banana previous energy user2  theta t user1 list all neutrons", user1=tarrival, user2=Ei, filename="Events4_0")
+  WHEN (Eband == 4.0) AT (0,0,0) RELATIVE Banana
+
+  COMPONENT Banana4_5 = Monitor_nD(xwidth=2.4, yheight=0.1, options="banana previous energy user2  theta t user1 list all neutrons", user1=tarrival, user2=Ei, filename="Events4_5")
+  WHEN (Eband == 4.5) AT (0,0,0) RELATIVE Banana
+
+  COMPONENT Banana5_0 = Monitor_nD(xwidth=2.4, yheight=0.1, options="banana previous energy user2  theta t user1 list all neutrons", user1=tarrival, user2=Ei, filename="Events5_0")
+  WHEN (Eband == 5.0) AT (0,0,0) RELATIVE Banana
+
+   COMPONENT Banana5_5 = Monitor_nD(xwidth=2.4, yheight=0.1, options="banana previous energy user2  theta t user1 list all neutrons", user1=tarrival, user2=Ei, filename="Events5_5")
+  WHEN (Eband == 5.5) AT (0,0,0) RELATIVE Banana
+
+    COMPONENT Banana6_5 = Monitor_nD(xwidth=2.4, yheight=0.1, options="banana previous energy user2  theta t user1 list all neutrons", user1=tarrival, user2=Ei, filename="Events6_5")
+  WHEN (Eband == 6.5) AT (0,0,0) RELATIVE Banana
+
+    COMPONENT Banana8_0 = Monitor_nD(xwidth=2.4, yheight=0.1, options="banana previous energy user2  theta t user1 list all neutrons", user1=tarrival, user2=Ei, filename="Events8_0")
+  WHEN (Eband == 8.0) AT (0,0,0) RELATIVE Banana
+  
+ COMPONENT det1= PSD_monitor_4PI(radius=1.3, nx=360,ny=180,filename="psd1",restore_neutron=1,nowritefile=noPSD)
+    AT (0,0,0) RELATIVE Magnon
+
+ COMPONENT Delta_t0 = Monitor_nD(radius=1.301, options="previous user1 limits=[0 0.003] bins=301", user1=deltat, username1="Delta t", filename="deltat")
+ AT (0,0,0) RELATIVE Banana
+  
 END
 
