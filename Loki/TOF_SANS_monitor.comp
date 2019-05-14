@@ -1,0 +1,259 @@
+/*******************************************************************************
+*
+* McStas, neutron ray-tracing package
+*         Copyright 1997-2002, All rights reserved
+*         Risoe National Laboratory, Roskilde, Denmark
+*         Institut Laue Langevin, Grenoble, France
+*
+* Component: TOF_PSD_monitor_rad
+*
+* %Identification
+* Written by: Kim Lefmann
+* Modified from: PSD_monitor_rad by Henrich Frielinghaus, FZJuelich
+* Date:       March 2012
+* Origin:     UCPH
+* Modified by:
+*
+* Position-sensitive TOF monitor with radially averaging.
+*
+* %D
+* TOF monitor that performs radial averaging.
+* Comment: The intensity is given as two 2D files:
+*          1) a radial sum vs. TOF
+*          2) a radial average (i.e. intensity per area) vs. TOF
+*
+* Example: TOF_PSD_monitor_rad(rmax=0.2, nr=100, filename="Output.psd", filename_av="Output_av.psd")
+*
+* %P
+* INPUT PARAMETERS:
+*
+* rmax: [m]              Outer radius of detector 
+* nr: [1]                Number of concentric circles 
+* filename: [string]     Name of file in which to store the detector image 
+* filename_av: [string]  Name of file in which to store the averaged detector image 
+* nt: [1]                Number of time bins 
+* tmin: [mu-s]           Beginning of time window 
+* tmax: [mu-s]           End of time window 
+* *
+* OUTPUT PARAMETERS:
+*
+* PSDr_N: []             Array of neutron counts
+* PSDr_p: []             Array of neutron weight counts
+* PSDr_p2: []            Array of second moments
+* PSDr_av_N: []          Array of neutron counts, averaged
+* PSDr_av_p: []          Array of neutron weight counts, averaged
+* PSDr_av_p2: []         Array of second moments, averaged
+*
+* %E
+*******************************************************************************/
+
+DEFINE COMPONENT TOF_SANS_monitor
+DEFINITION PARAMETERS (nr=100, nt=100, nq=100)
+SETTING PARAMETERS (string qFilename = "QDetector",string filename="", rmax=0.2,
+  tmin, tmax, SDD = 1.0, restore_neutron=0
+  ,instrumentlength = 1.0,PlotFraction=1,BinningFraction=1,Show = 1)
+OUTPUT PARAMETERS (TOFPSDr_N, TOFPSDr_p, TOFPSDr_p2, TOFPSDr_av_p, TOFPSDr_av_p2)
+
+DECLARE
+%{
+double I;
+double TwoThetaMax;
+double tt_0, tt_1;
+double TOFPSDr_N[nt][nq];
+double TOFPSDr_p[nt][nq];
+double TOFPSDr_p2[nt][nq];
+double TOFPSDr_av_p[nt][nq];
+double TOFPSDr_av_p2[nt][nq];
+double Lamda[nt];
+double qmax,Qmax, T;
+double Iq[nq];
+double Iq2[nq];
+double Iq_Ncount[nq];
+
+FILE *filePointer;
+double LambdaCalibration[nt];
+char buffer[50];
+int k, n, Count, target;
+%}
+
+INITIALIZE
+%{
+int i,j,k;
+
+tt_0=tmin*1e-6;
+tt_1=tmax*1e-6;
+for (i=0; i<nt; i++)
+      for (j=0; j<nq; j++)
+      {
+        TOFPSDr_N[i][j] = 0;
+        TOFPSDr_p[i][j] = 0;
+        TOFPSDr_p2[i][j] = 0;
+      }
+
+
+for (k=0; k<nt; k++)
+{
+  T = ((tt_1-tt_0)/nt) * (k+0.5) + tt_0; 
+  Lamda[k] = (2*PI/V2K) / (instrumentlength / T);
+}
+
+TwoThetaMax = atan(rmax / SDD);
+Qmax = 4 * PI * sin(TwoThetaMax / 2.0) / Lamda[0];
+//printf("L0: %1.20f\n",Lamda[0] );
+//printf("Lmax: %1.20f\n",Lamda[nt-1] );
+
+
+filePointer = fopen("LambdaCalibration1000.dat", "r");
+target = 4;
+Count = 2;
+n = 0;
+I = 0;
+
+for(k=0; k<nt*4; k++){
+  Count++;
+  fscanf(filePointer, "%s", buffer);
+  if(Count == target){
+    LambdaCalibration[n] = atof(buffer);
+    Count = 0;
+    n++;
+    I += atof(buffer);
+  }
+}
+fclose(filePointer);
+
+
+  %}
+TRACE
+  %{
+    int i,j;
+    double radpos, q;
+    double p1, p2;
+    double lamda;
+
+    PROP_Z0;
+
+    radpos = sqrt(x*x+y*y);
+    if(radpos < rmax && i>=0 && i < nt){
+      i = floor((t-tt_0)*nt/(tt_1-tt_0));              /* Bin number */
+
+
+      // Normalization by detector area of the r_bin the neutron hit.
+
+      j = floor(nr*radpos/rmax);
+      p1  = p  / (PI*rmax*rmax/(nr*nr)*(2*j+1.0));
+      p1 = p1 * I / LambdaCalibration[i];
+      p2 = p1*p1;
+
+      // Converting into q-space
+      
+      qmax = 4.0 * PI * sin(atan(rmax/SDD)/2.0)/Lamda[i];
+      q = 4.0 * PI * sin(atan(radpos/SDD)/2.0)/Lamda[i];
+      
+      /*j = floor(nq*q/Qmax);
+      if (q < Qmax && i>=0 && i < nt)
+      {
+        Iq_Ncount[j]++;
+        Iq[j] += p1;
+        Iq2[j] += p2;
+      }*/
+
+
+      j = floor(nq*q/qmax); 
+      if (q < qmax && i>=0 && i < nt)
+      {
+        TOFPSDr_N[i][j]++;
+        TOFPSDr_p[i][j] += p1;
+        TOFPSDr_p2[i][j]+= p2;
+      }
+      SCATTER;
+  }
+
+    if (restore_neutron) {
+      RESTORE_NEUTRON(INDEX_CURRENT_COMP, x, y, z, vx, vy, vz, t, sx, sy, sz, p);
+    }
+  %}
+
+
+SAVE
+  %{
+    int i,j,kk,count, name_count, NT, nqt, nqT;
+    double qmax, q, Q;
+  char ff[256];
+  char tt[256];
+  double count_bin[nq];
+
+
+  count = 0;
+  name_count = 0;
+  if(Show == 1){
+  for (kk=0; kk<nt; kk++) {
+    count++;
+    if(count == PlotFraction) {
+      count = 0;
+      name_count++;
+      qmax = 4.0 * PI * sin(atan(rmax/SDD)/2.0)/Lamda[kk];
+      sprintf(tt, "SANS Iq TOF slice %i ~ %g mu-s",kk,kk*(tmax-tmin)/nt);
+      sprintf(ff, "%s_%i",filename,name_count);
+      DETECTOR_OUT_1D(
+          tt,
+          "q [nm^-1]",
+          "Intensity",
+          "q", 0.0, qmax, nq,
+          &TOFPSDr_N[kk][0],&TOFPSDr_p[kk][0],&TOFPSDr_p2[kk][0],
+          ff);
+         }
+      }
+
+  for(nqT=0;nqT<nq;nqT++){
+    count_bin[nqT] = 0;
+    }
+
+  for(NT=0;NT<nt;NT++){
+    qmax = 4.0 * PI * sin(atan(rmax/SDD)/2.0)/Lamda[NT];
+    for(nqt=0;nqt<nq;nqt++){
+      q = qmax/nq * nqt;
+      Q = -10;
+      nqT = 0;
+      while(q > Q){
+        Q = Qmax/nq * nqT;
+        nqT++;
+      }
+      
+      count_bin[nqT] += 1;
+      Iq_Ncount[nqT] += TOFPSDr_N[NT][nqt];
+      Iq[nqT] += TOFPSDr_p[NT][nqt];
+      //Iq2[nqT] += TOFPSDr_p2[NT][nqt];
+    }
+  }
+ 
+  for(i=0;i<nq;i++){
+    if(count_bin[i] == 0.0){count_bin[i] += 1;}
+    //Iq_Ncount[i] = Iq_Ncount[i];// / count_bin[i];
+    Iq[i] = Iq[i] / count_bin[i];
+    Iq2[i] = Iq2[i] / (count_bin[i] * count_bin[i]);
+  }
+  // Output I(q)
+    DETECTOR_OUT_1D(
+        "QMonitor - Distribution in q (Radially averaged)",
+        "q [1 / AA]",
+        "I(q)",
+        "q", 
+    0.0, 
+    Qmax, 
+    nq,
+    &Iq_Ncount[0],
+    &Iq[0],
+    &Iq2[0],
+    qFilename
+  );
+   }
+
+  %}
+
+MCDISPLAY
+%{
+  magnify("xy");
+  circle("xy",0,0,0,rmax);
+%}
+
+END
