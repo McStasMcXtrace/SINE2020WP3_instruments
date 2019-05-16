@@ -50,8 +50,10 @@ if [ -d $1 ]; then
 	echo "$SUBDIR/$2.png \\" >> runme.sh
     done
     echo " $STARTDIR/Movie_$2.gif" >> runme.sh
+    echo " find . -name \*.ps -exec rm \{\} \; " >> runme.sh
+    echo " find . -name \*.png -exec rm \{\} \; " >> runme.sh
     chmod a+x runme.sh
-    echo Running movie creation command...
+    echo Running movie creation / cleanup commands...
     ./runme.sh
     echo Done!
 else
