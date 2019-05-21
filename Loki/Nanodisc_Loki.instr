@@ -30,12 +30,13 @@
 * Solvent_Fraction: [fraction] The ratio between heavy and light water the solvent is composed of
 * Incoherent_Solvent: [1] Control if the sample is with the incoherent background from the solvent or without by a integer input. 0 with, 1 without, 2 incoherent on its own
 * Mix_Fraction: [fraction] Yet another fraction
+* Repeat_Number: [1] Control of simulation statistics, number of repetitions of the event-file input.
 *
 * %Link
 *
 * %End
 *******************************************************************************/
-DEFINE INSTRUMENT Loki(int SAMPLE=0, Solvent_Fraction=1.0, Mix_Fraction=0.0, int Incoherent_Solvent=0)
+DEFINE INSTRUMENT Loki(int SAMPLE=0, Solvent_Fraction=1.0, Mix_Fraction=0.0, int Incoherent_Solvent=0, int Repeat_Number=50)
  
 DECLARE
 %{
@@ -113,7 +114,7 @@ INITIALIZE
 %{
 
 //All of these could be input perameters
-Repeat_Number=50;
+//Repeat_Number=50;
 DetectorSize = 2;
 Beamstop = 0;
 P_Interact = 0.0;
