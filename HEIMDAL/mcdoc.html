@@ -82,15 +82,6 @@
 
 
 
-<TR>
-<TD><B><A HREF="/Applications/McStas-2.5.app/Contents/Resources/mcstas/2.5/samples/PowderN.html">PowderN</A></B></TD>
-<TD>McStas release</TD>
-<TD>P. Willendrup, L. Chapon, K. Lefmann, A.B.Abrahamsen, N.B.Christensen, E.M.Lauridsen.</TD>
-<TD><A HREF="/Applications/McStas-2.5.app/Contents/Resources/mcstas/2.5/samples/PowderN.comp">comp</A></TD>
-<TD>General powder sample (N lines, single scattering, incoherent scattering)</TD>
-</TR>
-
-
 
 </TABLE>
 
@@ -148,6 +139,75 @@
 
 
 
+<TR>
+<TD><B><A HREF="/Applications/McStas-2.5.app/Contents/Resources/mcstas/2.5/contrib/NPI_tof_dhkl_detector.html">NPI_tof_dhkl_detector</A></B></TD>
+<TD></TD>
+<TD>Jan Saroun, saroun@ujf.cas.cz</TD>
+<TD><A HREF="/Applications/McStas-2.5.app/Contents/Resources/mcstas/2.5/contrib/NPI_tof_dhkl_detector.comp">comp</A></TD>
+<TD>Release: McStas 2.5
+Last update: 30/11/2018
+
+A cylindrical detector which converts time-of-flight data (x,y,z,time) to a 1D diffractogram in dhkl.
+The detector model includes finite detection depth, spatial and time resolution. Optionally, the component
+exports position and time coordinates of detection events in an ASCII file.
+
+The component can also handle setups employing a modulation chopper for peak multiplexing at a long pulse source,
+as proposed for the diffractometer BEER@ESS. In this case, the component requires chopper parameters
+(modulation period, width of the primary unmodulated pulse), and a file with estimated dhkl values.
+The component then estimates valid regions on the angle/tof map, excluding areas assumed to be empty
+or with overlaping lines. This map is exported together with the diffractogram.
+
+Tips for usage:
+1) Centre the detector at the sample axis, keep z-axis parallel to the incident beam.
+2) Set the radius equal to the distance from the sample axis to the front face of the detection volume.
+3) Linst-Lc is used to determine "instrumental" wavelength as lambda = h/m_n*time/(Linst-Lc);
+
+%P
+INPUT PARAMETERS:
+
+filename:	[str]	Name of file in which to store the detector data.
+radius:	[m]		Radius of detector.
+yheight:	[m]		Height of detector.
+zdepth:	[m]		Thickness of the detection volume.
+amin:		[deg]	minimum of scattering angle to be detected.
+amax: 	[deg]	maximum of scattering angle to be detected.
+d_min:	[AA]	minimum of inter-planar spacing to be detected.
+d_max:	[AA]	maximum of inter-planar spacing to be detected.
+time0:	[s]		Time delay of the wavelength definition chopper with respect to the source pulse.
+Lc:		[m]		Distance from the source to the pulse chopper (set 0 for a short pulse source).
+Linst:	[m]		Distance from the source to the detector.
+res_x:	[m]		Spatial resolution along x (Gaussian FWHM).
+res_y:	[m]		Spatial resolution along y (Gaussian FWHM).
+res_t:	[s]		Time resolution (Gaussian FWHM). Readout only, path to capture is accounted for by the tracing code.
+mu:		[1/cm/AA]	Capture coefficient for the detection medium.
+modulation:	[1|0]	Switch on/off the modulation regime (BEER multiplexing technique).
+mod_dt:	[s]		Modulation period.
+mod_twidth: [s]	Width of the primary source pulse.
+mod_shift:	[float]		Relative shift of the modulation pattern (delta_d/d, constant for all reflections).
+mod_d0_table: [str]	Name of a file with the list of dhkl estimates (one per line).
+verbose:	[1|0]	Switch for extended reporting.
+restore_neutron: 	[1|0]	Switch for restoring of previous neutron state.
+
+DEFINITION PARAMETERS:
+
+nd:	Number of bins for dhkl in the 1D diffractograms.
+na:	Number of bins for scattering angles in the 2D maps.
+nt:	Number of bins for time of flight in the 2D maps.
+nev:  Number of detection events to export in "events.dat" (only modulation mode, set 1 for no export)</TD>
+</TR>
+
+
+<TR>
+<TD><B><A HREF="/Applications/McStas-2.5.app/Contents/Resources/mcstas/2.5/contrib/NPI_tof_theta_monitor.html">NPI_tof_theta_monitor</A></B></TD>
+<TD>Risoe</TD>
+<TD>Kim Lefmann</TD>
+<TD><A HREF="/Applications/McStas-2.5.app/Contents/Resources/mcstas/2.5/contrib/NPI_tof_theta_monitor.comp">comp</A></TD>
+<TD>Release: McStas 1.6
+
+Cylindrical (2pi) PSD Time-of-flight monitor.</TD>
+</TR>
+
+
 
 </TABLE>
 
@@ -184,15 +244,6 @@
 <TD><B><I>Description</I></B></TD>
 </TR>
 
-
-
-<TR>
-<TD><B><A HREF="/Applications/McStas-2.5.app/Contents/Resources/mcstas/2.5/examples/Test_PowderN_Res.html">Test_PowderN_Res</A></B></TD>
-<TD>DTU</TD>
-<TD>Peter Willendrup</TD>
-<TD><A HREF="/Applications/McStas-2.5.app/Contents/Resources/mcstas/2.5/examples/Test_PowderN_Res.instr">instr</A></TD>
-<TD>Idealized powder diffractometer, to illustrate the difference between 'banana,theta' and 'banana,divergence' in Monitor_nD.</TD>
-</TR>
 
 
 
@@ -244,7 +295,7 @@
 
 <P><BR>
 <ADDRESS>
-Generated on 2019-04-09 15:22:35
+Generated on 2019-06-06 13:27:40
 </ADDRESS>
 </BODY>
 </HTML>
