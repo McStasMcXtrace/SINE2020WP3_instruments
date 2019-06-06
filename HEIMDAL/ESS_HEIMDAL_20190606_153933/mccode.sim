@@ -1,0 +1,92 @@
+McStas simulation description file for ESS_HEIMDAL.
+Date:    Thu Jun  6 15:39:36 2019
+Program: McStas 2.5 - Dec. 12, 2018
+
+begin instrument: ESS_HEIMDAL
+  File: ESS_HEIMDAL_20190606_153933/mccode
+  Source: ESS_HEIMDAL.instr
+  Parameters:  lc(double) lam0(double) dlam(double)
+  Trace_enabled: yes
+  Default_main: yes
+  Embedded_runtime: yes
+end instrument
+
+begin simulation: ESS_HEIMDAL_20190606_153933
+  Format: McCode with text headers
+  URL: http://www.mccode.org
+  Creator: McStas 2.5 - Dec. 12, 2018
+  Instrument: ESS_HEIMDAL.instr
+  Ncount: 10000000
+  Trace: no
+  Gravitation: no
+  Seed: 1559865231
+  Directory: ESS_HEIMDAL_20190606_153933
+  Nodes: 4
+  Param: lc=0
+  Param: lam0=2
+  Param: dlam=1.8
+end simulation
+
+begin data
+  Date: Thu Jun  6 15:40:49 2019 (1559828449)
+  type: array_1d(3000)
+  Source: ESS_HEIMDAL (ESS_HEIMDAL.instr)
+  component: dhklmon
+  position: 0 0 158
+  title: ToF to dhkl detector
+  Ncount: 10000000
+  filename: dhkl.dat
+  statistics: X0=1.482; dX=0.413463;
+  signal: Min=1.0892e-87; Max=5.29839e-08; Mean=1.84809e-10;
+  values: 5.54426e-07 2.70522e-09 2.77612e+08
+  xvar: d
+  yvar: (I,I_err)
+  xlabel: dhkl [AA]
+  ylabel: Intensity
+  xlimits: 0.5 5.5
+  variables: d I I_err N
+end data
+
+begin data
+  Date: Thu Jun  6 15:40:49 2019 (1559828449)
+  type: array_2d(600, 800)
+  Source: ESS_HEIMDAL (ESS_HEIMDAL.instr)
+  component: psdtof
+  position: 0 0 158
+  title: Cylindrical monitor ToF x 2theta
+  Ncount: 10000000
+  filename: tof_theta.dat
+  statistics: X0=137.581; dX=26.5958; Y0=89369.6; dY=20012.5;
+  signal: Min=0; Max=5.20895e-10; Mean=7.98491e-13;
+  values: 3.83276e-07 2.11315e-09 1.57273e+08
+  xvar: Sc
+  yvar: Ti
+  xlabel: Scattering angle [deg]
+  ylabel: Time-of-flight [\gms]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: 10 180 40889.1 120889
+  variables: I I_err N
+end data
+
+begin data
+  Date: Thu Jun  6 15:40:50 2019 (1559828450)
+  type: array_2d(400, 400)
+  Source: ESS_HEIMDAL (ESS_HEIMDAL.instr)
+  component: psdtofDetail
+  position: 0 0 158
+  title: Cylindrical monitor ToF x 2theta
+  Ncount: 10000000
+  filename: tof_theta_detail.dat
+  statistics: X0=77.7616; dX=1.36921; Y0=105335; dY=1578.3;
+  signal: Min=0; Max=3.96055e-12; Mean=1.11116e-15;
+  values: 1.77786e-10 1.69796e-11 855983
+  xvar: Sc
+  yvar: Ti
+  xlabel: Scattering angle [deg]
+  ylabel: Time-of-flight [\gms]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: 75 80 100000 110000
+  variables: I I_err N
+end data

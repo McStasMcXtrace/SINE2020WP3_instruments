@@ -32,7 +32,7 @@
 *
 * %End
 *******************************************************************************/
-DEFINE INSTRUMENT ESS_BEER_MCPL(lc=0, lam0=2.0, dlam=1.8)
+DEFINE INSTRUMENT ESS_HEIMDAL(lc=0, lam0=2.0, dlam=1.8)
 
 DECLARE
 %{
@@ -84,7 +84,7 @@ AT (0, 0, 0) RELATIVE Sample_axis
 ROTATED (0, 90, 0) RELATIVE Sample_axis
 
 
-SPLIT 10 COMPONENT sample = PowderN (
+SPLIT 32 COMPONENT sample = PowderN (
 	d_phi=10,radius=0.02, yheight=0.07, reflections = "CoFe2O4.txt")
 AT ( 0, 0, 0) RELATIVE Sample_axis
   
