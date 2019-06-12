@@ -29,10 +29,11 @@
 * pinc: [ ]         pinc value passed to PowderN.comp
 * strain: [ppm]     Macro-strain (peak shift)
 * ustrain: [ppm]    Micro-strain (peak broadening)
+* reflections1: [string] Reflection list to use with (first) Powder sample
 *
 * %End
 *******************************************************************************/
-DEFINE INSTRUMENT ESS_HEIMDAL(lc=0, lam0=2.0, dlam=1.8)
+DEFINE INSTRUMENT ESS_HEIMDAL(lc=0, lam0=2.0, dlam=1.8, string reflections1="CoFe2O4.txt")
 
 DECLARE
 %{
@@ -85,7 +86,7 @@ ROTATED (0, 90, 0) RELATIVE Sample_axis
 
 
 SPLIT 32 COMPONENT sample = PowderN (
-	d_phi=10,radius=0.02, yheight=0.07, reflections = "CoFe2O4.txt")
+	d_phi=10,radius=0.02, yheight=0.07, reflections = reflections1)
 AT ( 0, 0, 0) RELATIVE Sample_axis
   
 COMPONENT dhklmon = NPI_tof_dhkl_detector(  
