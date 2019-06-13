@@ -1,138 +1,127 @@
 /*******************************************************************************
-* 
 * Instrument: ESS_HEIMDAL
-* 
-* %Identification
-* Written by: Peter Willendrup 
+*
+* %I
+* Written by: Peter Willendrup and Jakob Garde
 * Date: June 2019
 * Origin: DTU
 * %INSTRUMENT_SITE: ESS
+*
 * Simplistic ToF Diffractometer HEIMDAL@ESS
 *
-* %Description 
+* %D
+* <instrument description>
 *
-* input: [str]      Input MCPL file	
-* repetition: [1]    Number of loops through the MCPL file	
-* pwdfile: [str]    Input sample file for PowderN.comp
-* lc: [m]           distance of the pulse definition chopper 
-* lam0: [AA]        nominal wavelength (centre of the frame, determines the chopper phase) 
-* dlam: [AA]        wavelength band width (only for filtering MCPL input and plot ranges)
-* omega: [deg]      sample orientation (y-axis)
-* chi: [deg]        sample orientation (z-axis)
-* colw: [mm]        collimator width (0.5, 1, 2, 3 or 4)
-* modul: [0|1]      modulation mode switch
-* mod_frq: [Hz]     modulation frequency (chopper frequency x number of slits)
-* mod_twidth: [s]   modulation frame width (should be ~> ESS pulse width)
-* mod_shift: []     assumed line shift introduced to NPI_tof_dhkl_detector (modulation mode only)
-* only_event: [1]   if > -1, filters out events with line_info.itype<>only_event after PowderN sample
-* ptra: [ ]         p_transmit value passed to PowderN.comp
-* pinc: [ ]         pinc value passed to PowderN.comp
-* strain: [ppm]     Macro-strain (peak shift)
-* ustrain: [ppm]    Micro-strain (peak broadening)
-* reflections1: [string] Reflection list to use with (first) Powder sample
+* Example: lam0=2.0, dlam=1.8
 *
-* %End
+* %P
+*
+* %E
 *******************************************************************************/
-DEFINE INSTRUMENT ESS_HEIMDAL(lc=0, lam0=2.0, dlam=1.8, string reflections1="CoFe2O4.txt")
+DEFINE INSTRUMENT ESS_HEIMDAL(lam0=2.0, dlam=1.8)
+
 
 DECLARE
 %{
-   double tof;
+  double tof;
   double det_th1, det_th2;
-  double Linst;
+//  double Linst;
   double det_rad,det_Linst,det_t0,det_d1,det_d2;
-    double hm = 2*PI*K2V; // h/m_n
+  double hm = 2*PI*K2V; // h/m_n
 %}
 
 INITIALIZE
 %{
-  Linst=158;
-/* Detector parameters 
---------------------------------*/
 // angular range
 det_th1=10;
- det_th2=180;
-// detection radius
-det_rad=2;
-// distance from the source to the detector
-det_Linst=Linst+det_rad;
-// chopper delay
-det_t0=lc/(hm/lam0);
+det_th2=180;
 // dhkl range
 det_d1=0.5;
 det_d2=5.5;
 tof=det_Linst/hm*lam0*1e6; // tof in [us]
-
 %}
 
+
 TRACE
- 
-COMPONENT Origin = Progress_bar()
-  AT (0, 0, 0) ABSOLUTE
 
-  COMPONENT src = Source_simple(lambda0=lam0, dlambda=dlam,target_index=1, focus_xw=0.02,focus_yh=0.07,flux=1e14)
-  AT (0,0,0) ABSOLUTE
-  
-/* Place the sample axis to the correct distance after the MCPL_input.
-Depends on the configuration of the primary beam simulation. Here we assume 40 mm.*/  
-COMPONENT Sample_axis = Arm() 
-AT (0, 0, Linst) RELATIVE src
-ROTATED (0, 0, 0) RELATIVE src
+COMPONENT origin = Progress_bar()
+AT (0, 0, 0) RELATIVE ABSOLUTE
 
-/* Detector arm - defines scattering angle at the detector centre. */ 
-COMPONENT Detector_arm = Arm() 
-AT (0, 0, 0) RELATIVE Sample_axis
-ROTATED (0, 90, 0) RELATIVE Sample_axis
+COMPONENT source = Source_simple(
+    lambda0=lam0,
+    dlambda=dlam,
+    target_index=3,
+    focus_xw=0.02,
+    focus_yh=0.07,
+    flux=1e14)
+AT (0,0,0) RELATIVE PREVIOUS
 
+COMPONENT psd_source = PSD_monitor(
+    filename="PSD_source.dat",
+    nx=40,
+    ny=40,
+    xwidth=0.3,
+    yheight=0.3,
+    restore_neutron=1)
+AT (0, 0, 0.01) RELATIVE source
+
+
+//
+// SAMPLE
+//
 
 SPLIT 32 COMPONENT sample = PowderN (
-	d_phi=10,radius=0.02, yheight=0.07, reflections = reflections1)
-AT ( 0, 0, 0) RELATIVE Sample_axis
-  
-COMPONENT dhklmon = NPI_tof_dhkl_detector(  
-	nd=3000, 
-	filename="dhkl.dat",  
-	yheight=1.0, 
-	zdepth=0.01, 
-	radius=2, 
-	amin=det_th1,  
-	amax=det_th2, 
-	d_min=det_d1,  
-	d_max=det_d2, 
-	time0=det_t0,
-	Linst=det_Linst, 
-	Lc = 0,
-	res_x=0.002,    
-	res_y=0.005, 
-	res_t=1e-6,    
-	mu=1.0,  
-	modulation=0,
-	mod_dt=0,    
-	mod_twidth=0 ,    
-	mod_shift=0,
-	mod_d0_table="dhkl.tab",  
-	restore_neutron=1)  
-  AT (0, 0, 0) RELATIVE Sample_axis   
- 
- /* ToF vs. 2theta map */
-COMPONENT psdtof = NPI_tof_theta_monitor( 
+    d_phi=10,
+    radius=0.02,
+    yheight=0.07,
+    reflections = "CoFe2O4.txt")
+AT (0, 0, 150) RELATIVE source
+
+
+//
+// DETECTOR
+//
+
+COMPONENT npi_tof_dhkl_detector = NPI_tof_dhkl_detector(
+    nd=3000,
+    filename="dhkl.dat",
+    yheight=1.0,
+    zdepth=0.01,
+    radius=2,
+    amin=det_th1,
+    amax=det_th2,
+    d_min=det_d1,
+    d_max=det_d2,
+    time0=0,
+    Linst=152,
+    Lc=0,
+    res_x=0.002,
+    res_y=0.005,
+    res_t=1e-6,
+    mu=1.0,
+    modulation=0,
+    mod_dt=0,
+    mod_twidth=0,
+    mod_shift=0,
+    mod_d0_table="dhkl.tab",
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE sample
+
+
+// ToF vs. 2theta map
+COMPONENT psdtof = NPI_tof_theta_monitor(
     nt = 800, na = 600, filename = "tof_theta.dat",
-    radius = 2, yheight = 1, tmin = tof-40e3, tmax = tof+40e3, 
-    amin = det_th1, amax = det_th2, restore_neutron = 1,verbose=0)       
-  AT (0, 0, 0) RELATIVE Sample_axis 
-  
- /* ToF vs. 2theta map, detail */ 
-  COMPONENT psdtofDetail= NPI_tof_theta_monitor(
-    nt = 400, na = 400, filename = "tof_theta_detail.dat", 
-    radius = 2, yheight = 1, tmin = 100e3, tmax = 110e3, 
-    amin = 75, amax = 80, restore_neutron = 1,verbose=0)       
-  AT (0, 0, 0) RELATIVE Sample_axis     
- 
+    radius = 2, yheight = 1, tmin = tof-40e3, tmax = tof+40e3,
+    amin = det_th1, amax = det_th2, restore_neutron = 1,verbose=0)
+AT (0, 0, 0) RELATIVE sample
 
-END  
-  
- 
- 
+// ToF vs. 2theta map, detail
+COMPONENT psdtofDetail= NPI_tof_theta_monitor(
+    nt = 400, na = 400, filename = "tof_theta_detail.dat",
+    radius = 2, yheight = 1, tmin = 100e3, tmax = 110e3,
+    amin = 75, amax = 80, restore_neutron = 1,verbose=0)
+AT (0, 0, 0) RELATIVE sample
 
 
-     
+
+END
