@@ -1,0 +1,41 @@
+# TITLE  Co16 Fe16 Co8 Fe8 O32 [Cubic, Centric (-1 at origin)]
+#        a         b         c       alpha     beta      gamma
+# CELL    8.39400   8.39400   8.39400  90.00000  90.00000  90.00000
+# SPCGRP  F d -3 m [Number  227]
+#                    X         Y         Z         B         Occ       Spin      Charge
+# Atom  Co1                    0.00000   0.00000   0.00000   0.00000   0.03000   0.00000   0.00000
+# Atom  Fe1                    0.00000   0.00000   0.00000   0.00000   0.05333   0.00000   0.00000
+# Atom  Co2                    0.62500   0.62500   0.62500   0.00000   0.01333   0.00000   0.00000
+# Atom  Fe2                    0.62500   0.62500   0.62500   0.00000   0.02833   0.00000   0.00000
+# Atom  O1                     0.37600   0.37600   0.37600   0.00000   0.16667   0.00000   0.00000
+# COMMAND cif2hkl CoFe2O4_109044.cif --output CoFe2O4_109044.txt
+# CIF2HKL (c) ILL 2012 E. Farhi <farhi@ill.eu> based on CrysFML
+# DATE    12/06/2019 at 13:30:47
+#
+# Physical parameters:
+# sigma_coh       423.44348 coherent   scattering cross section in [barn]
+# sigma_inc       125.55785 incoherent scattering cross section in [barn]
+# sigma_abs       953.76611 absorption scattering cross section in [barn]
+# density           5.52328 in [g/cm^3]
+# weight         3266.65747 in [g/mol]
+# Vc              591.43481 volume of unit cell in [A^3]
+# lattice_a         8.39400 lattice parameter a in [Angs]
+# lattice_b         8.39400 lattice parameter b in [Angs]
+# lattice_c         8.39400 lattice parameter c in [Angs]
+# lattice_aa       90.00000 lattice angle alpha in [deg]
+# lattice_bb       90.00000 lattice angle beta in [deg]
+# lattice_cc       90.00000 lattice angle gamma in [deg]
+# STRUCTURE FACTORS(NEUTRONS)
+#
+# Format parameters: Crystallographica format
+# column_h  1
+# column_k  2
+# column_l  3
+# column_j  4   multiplicity 'j'
+# column_d  5   d-spacing 'd' in [Angs]
+# column_F2 6   norm of scattering factor |F|^2 in [barn]
+#
+# List   992 reflections for lambda >     0.5000 [Angs], decreasing d-spacing.
+# H   K   L     Mult    dspc                   |Fc|^2
+   4    4    0    256       4.8    1000
+
