@@ -22,7 +22,7 @@
 *
 * %E
 *******************************************************************************/
-DEFINE INSTRUMENT ESS_HEIMDAL(lam0=2.0, dlam=1.8, samplerate_1=0.33, samplerate_2=0.66/*, T=400*/)
+DEFINE INSTRUMENT ESS_HEIMDAL(lam0=2.0, dlam=1.8, samplerate_1=0.33, samplerate_2=0.66/*, T=400*/, dspace_factor=1)
 
 
 DECLARE
@@ -85,8 +85,8 @@ AT (0, 0, 0.01) RELATIVE source
 
 
 // CoFe2O4, compound #1
-SPLIT 32 COMPONENT sample_1 = PowderN_dspace_factor (
-    dspace_factor=1,
+SPLIT 8 COMPONENT sample_1 = PowderN_dspace_factor (
+    dspace_factor=dspace_factor,
     d_phi=10,
     radius=0.02,
     yheight=0.07,
@@ -95,7 +95,7 @@ WHEN (samplechoice<samplerate_1)
 AT (0, 0, 150) RELATIVE source
 
 // CoFe, compound #2
-SPLIT 32 COMPONENT sample_2 = PowderN_dspace_factor (
+SPLIT 8 COMPONENT sample_2 = PowderN_dspace_factor (
     dspace_factor=1,
     d_phi=10,
     radius=0.02,
@@ -105,7 +105,7 @@ WHEN (samplechoice>=samplerate_1 && samplechoice<samplerate_2)
 AT (0, 0, 150) RELATIVE source
 
 // magnetic peak
-COMPONENT Magnet =  PowderN_dspace_factor (
+SPLIT 8 COMPONENT Magnet = PowderN_dspace_factor (
     dspace_factor=1,
     d_phi=10,
     radius=0.02,
@@ -123,7 +123,6 @@ EXTEND %{
     vx=d0*nrm;
     vy=d1*nrm;
     vz=d2*nrm;
-
 
     double T = 400;
     // diminishes peak intensity

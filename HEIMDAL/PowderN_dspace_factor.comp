@@ -108,7 +108,7 @@ long   xs_compute, xs_reuse, xs_calls;
      else    return (s < 0 ? -1 : 1);
   } /* PN_list_compare */
 
-  int read_line_data(char *SC_file, struct line_info_struct *info)
+  int read_line_data_MOD(char *SC_file, struct line_info_struct *info, double dspc_factor)
   {
     struct line_data *list = NULL;
     int    size = 0;
@@ -212,7 +212,8 @@ long   xs_compute, xs_reuse, xs_calls;
 
     for (i=0; i<size; i++)
     {
-      /*      printf("Reading in line %i\n",i);*/
+      /*      printf("Reading in line %i\n",i); */
+
       double j=0, d=0, w=0, q=0, DWfactor=0, F2=0, Epsilon=0;
       int index;
 
@@ -226,6 +227,11 @@ long   xs_compute, xs_reuse, xs_calls;
         j = Table_Index(sTable, i, info->column_order[0]-1);
       if (info->column_order[1] >0)
         d = Table_Index(sTable, i, info->column_order[1]-1);
+
+        // modify dspace_factor here
+        printf("modifying d spacing: %g into %g\n", d, d*dspc_factor);
+        d = d*dspc_factor;
+
       if (info->column_order[2] >0)
         F2 = Table_Index(sTable, i, info->column_order[2]-1);
       if (info->column_order[3] >0)
@@ -498,12 +504,10 @@ INITIALIZE
   }
 
   if (reflections && strlen(reflections) && strcmp(reflections, "NULL") && strcmp(reflections, "0")) {
-    i = read_line_data(reflections, &line_info);
+    i = read_line_data_MOD(reflections, &line_info, dspace_factor);
     if (i == 0)
       exit(fprintf(stderr,"PowderN: %s: reflection file %s is not valid.\n"
                           "ERROR    Please check file format (laz or lau).\n", NAME_CURRENT_COMP, reflections));
-    printf("\nREFLECTIONS: %g\n", i);
-    printf("COUNT: %d\n\n", line_info.count);
   }
 
   /* compute the scattering unit density from material weight and density */
