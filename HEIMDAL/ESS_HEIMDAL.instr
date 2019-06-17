@@ -15,19 +15,24 @@
 * Example: lam0=2.0, dlam=1.8
 *
 * %P
+* lam0: [ÅÅ]          source median
+* dlam: [ÅÅ]          source deviation
+* samplerate_1: []    propability of hitting sample #1 (CoFe2O4)
+* samplerate_2: []    propability of hitting sample #2 (CoFe), accumulated with samplerate_1
 *
 * %E
 *******************************************************************************/
-DEFINE INSTRUMENT ESS_HEIMDAL(lam0=2.0, dlam=1.8)
+DEFINE INSTRUMENT ESS_HEIMDAL(lam0=2.0, dlam=1.8, samplerate_1=0.33, samplerate_2=0.66/*, T=400*/)
 
 
 DECLARE
 %{
   double tof;
   double det_th1, det_th2;
-//  double Linst;
   double det_rad,det_Linst,det_t0,det_d1,det_d2;
   double hm = 2*PI*K2V; // h/m_n
+  double samplechoice = 0;
+  double Tc = 500;
 %}
 
 INITIALIZE
@@ -39,6 +44,11 @@ det_th2=180;
 det_d1=0.5;
 det_d2=5.5;
 tof=det_Linst/hm*lam0*1e6; // tof in [us]
+
+if (samplerate_2 < samplerate_1) {
+    printf("WARNING: samplerate_1 must be smaller than samplerate_2.");
+    exit(1);
+}
 %}
 
 
@@ -55,6 +65,9 @@ COMPONENT source = Source_simple(
     focus_yh=0.07,
     flux=1e14)
 AT (0,0,0) RELATIVE PREVIOUS
+EXTEND %{
+  samplechoice=rand01();
+%}
 
 COMPONENT psd_source = PSD_monitor(
     filename="PSD_source.dat",
@@ -70,17 +83,62 @@ AT (0, 0, 0.01) RELATIVE source
 // SAMPLE
 //
 
-SPLIT 32 COMPONENT sample = PowderN (
+
+// CoFe2O4, compound #1
+SPLIT 32 COMPONENT sample_1 = PowderN_dspace_factor (
+    dspace_factor=1,
     d_phi=10,
     radius=0.02,
     yheight=0.07,
     reflections = "CoFe2O4_109044.txt")
+WHEN (samplechoice<samplerate_1)
 AT (0, 0, 150) RELATIVE source
+
+// CoFe, compound #2
+SPLIT 32 COMPONENT sample_2 = PowderN_dspace_factor (
+    dspace_factor=1,
+    d_phi=10,
+    radius=0.02,
+    yheight=0.07,
+    reflections = "CoFe_56273.txt")
+WHEN (samplechoice>=samplerate_1 && samplechoice<samplerate_2)
+AT (0, 0, 150) RELATIVE source
+
+// magnetic peak
+COMPONENT Magnet =  PowderN_dspace_factor (
+    dspace_factor=1,
+    d_phi=10,
+    radius=0.02,
+    yheight=0.07,
+    reflections = "magnetic_peak.txt")
+WHEN (samplechoice>=samplerate_2)
+AT (0, 0, 150) RELATIVE source
+EXTEND %{
+    // peak broadening
+    double dir_smear = 0.01;
+    double d0,d1,d2,nrm;
+    nrm=sqrt(vx*vx+vy*vy+vz*vz);
+    randvec_target_circle(&d0, &d1, &d2, NULL, vx, vy, vz, sin(dir_smear*DEG2RAD));
+    NORM(d0,d1,d2);
+    vx=d0*nrm;
+    vy=d1*nrm;
+    vz=d2*nrm;
+
+
+    double T = 400;
+    // diminishes peak intensity
+    if (T<Tc && T>=0) {
+        p *= (Tc-T)/(T);
+    }
+    else
+        ABSORB;
+%}
 
 
 //
 // DETECTOR
 //
+
 
 COMPONENT npi_tof_dhkl_detector = NPI_tof_dhkl_detector(
     nd=3000,
@@ -105,7 +163,7 @@ COMPONENT npi_tof_dhkl_detector = NPI_tof_dhkl_detector(
     mod_shift=0,
     mod_d0_table="dhkl.tab",
     restore_neutron=1)
-AT (0, 0, 0) RELATIVE sample
+AT (0, 0, 0) RELATIVE sample_1
 
 
 // ToF vs. 2theta map
@@ -113,14 +171,14 @@ COMPONENT psdtof = NPI_tof_theta_monitor(
     nt = 800, na = 600, filename = "tof_theta.dat",
     radius = 2, yheight = 1, tmin = tof-40e3, tmax = tof+40e3,
     amin = det_th1, amax = det_th2, restore_neutron = 1,verbose=0)
-AT (0, 0, 0) RELATIVE sample
+AT (0, 0, 0) RELATIVE sample_1
 
 // ToF vs. 2theta map, detail
 COMPONENT psdtofDetail= NPI_tof_theta_monitor(
     nt = 400, na = 400, filename = "tof_theta_detail.dat",
     radius = 2, yheight = 1, tmin = 100e3, tmax = 110e3,
     amin = 75, amax = 80, restore_neutron = 1,verbose=0)
-AT (0, 0, 0) RELATIVE sample
+AT (0, 0, 0) RELATIVE sample_1
 
 
 
