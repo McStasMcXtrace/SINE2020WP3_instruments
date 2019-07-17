@@ -33,12 +33,12 @@ def populate_data(mode, size):
     return(temp)
 
 #%% Extract data from mcstas simulation
-#data = {}
+data = {}
 mode = 'HR'
 data.update({mode:populate_data(mode,36)})
-mode = 'therm'
-data.update({mode:populate_data(mode,36)})
-mode = 'cold'
+#mode = 'therm'
+#data.update({mode:populate_data(mode,36)})
+#mode = 'cold'
 #data.update({mode:populate_data(mode,36)})
 
 #%% Compute maps from xyz data
@@ -62,41 +62,6 @@ for k in data.keys():
         pos1 += 1
 
     maps.update({k:maps_temp})
-
-t1 = time.time()
-print('Elapsed time: %6.2f seconds' % (t1-t0,))
-
-#%% Compute maps from xyz data numba version
-from numba import jit, float64
-import numpy as np
-
-@jit
-def maps_generator(arr):
-    delta=0.2
-    qmax=10
-    qa=np.arange(-qmax,qmax,delta)
-    qb=np.arange(-qmax,qmax,delta)
-
-    pos1 = 0
-    maps_temp = np.zeros([len(qa), len(qb)])
-    for i in qa:
-        dt = arr[np.abs(arr[:,1]-i)<=delta/2,:]
-        pos2 = 0
-        for j in qb:
-            dt2 = dt[np.abs(dt[:,2]-j)<=delta/2,:]
-            maps_temp[pos1,pos2] = np.sum(dt2[:,3])
-            pos2 += 1
-
-        pos1 += 1
-
-    return(maps_temp)
-
-import time
-t0 = time.time()
-
-maps = {}
-for k in data.keys():
-    maps.update({k:maps_generator(data[k])})
 
 t1 = time.time()
 print('Elapsed time: %6.2f seconds' % (t1-t0,))
