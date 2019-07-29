@@ -15,7 +15,7 @@
 # Physical parameters:
 # sigma_coh       423.44348 coherent   scattering cross section in [barn]
 # sigma_inc       125.55785 incoherent scattering cross section in [barn]
-# sigma_abs       953.76611 absorption scattering cross section in [barn]
+# sigma_abs       0 absorption scattering cross section in [barn]
 # density           5.52328 in [g/cm^3]
 # weight         3266.65747 in [g/mol]
 # Vc              591.43481 volume of unit cell in [A^3]

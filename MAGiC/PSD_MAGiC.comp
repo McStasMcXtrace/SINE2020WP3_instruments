@@ -1,0 +1,200 @@
+/*******************************************************************************
+*
+* McStas, neutron ray-tracing package
+*         Copyright 1997-2002, All rights reserved
+*         Risoe National Laboratory, Roskilde, Denmark
+*         Institut Laue Langevin, Grenoble, France
+*
+* Component: PSD_TOF_monitor
+*
+* %I
+* Written by: Peter Willendrup, derived from PSD_monitor by Kim Lefmann
+* Date: Feb 3, 1998
+* Version: $Revision: 4382 $
+* Origin: Risoe
+* Release: McStas 1.6
+*
+* Position-sensitive monitor with TOF slices.
+*
+* %D
+* An (nx times ny) pixel PSD monitor with nt time bins pr pixel. 
+*
+* Will output nt PSD images plus 1 integrated image.
+*
+* Example: PSD_TOF_monitor(xmin=-0.1, xmax=0.1, ymin=-0.1, ymax=0.1,
+            nx=90, ny=90, tmin=4000, tmax=7000, nt=3, filename="Output")
+*
+* %P
+* INPUT PARAMETERS:
+*
+* xmin:     Lower x bound of detector opening (m)
+* xmax:     Upper x bound of detector opening (m)
+* ymin:     Lower y bound of detector opening (m)
+* ymax:     Upper y bound of detector opening (m)
+* tmin:     Lower time bound (mu-s)
+* tmax:     Upper time bound (mu-s)
+* xwidth:   Width/diameter of detector (x). Overrides xmin,xmax. (m)
+* yheight:  Height of detector (y). Overrides ymin,ymax. (m)
+* nx:       Number of pixel columns (1)
+* ny:       Number of pixel rows (1)
+* nt:       Number of TOF bins (1)
+* filename: Name of file in which to store the detector image (text)
+* restore_neutron: If set, the monitor does not influence the neutron state (1)
+*
+* OUTPUT PARAMETERS:
+*
+* PSD_p:    Array of neutron weight counts
+*
+* %E
+*******************************************************************************/
+
+
+DEFINE COMPONENT PSD_MAGiC
+DEFINITION PARAMETERS (nx=90, ny=90, nt=10, string filename, restore_neutron=0, radius=1.0)
+SETTING PARAMETERS (xmin=0, xmax=0, ymin=0, ymax=0, xwidth=0, yheight=0, tmin=0, tmax=0, sample_rot=0, a_param=14.408, lambda_calc=0)
+OUTPUT PARAMETERS (PSD_N, PSD_p, PSD_p2, PSD_Ns, PSD_ps, PSD_p2s)
+
+DECLARE
+  %{
+    double PSD_p[nt][nx][ny];
+    double PSD_err[nt][nx][ny];
+
+    int test=0;
+  %}
+INITIALIZE
+%{
+  int i,j,k;
+
+    if (xwidth  > 0) { xmax = xwidth/2;  xmin = -xmax; }
+    if (yheight > 0) { ymax = yheight/2; ymin = -ymax; }
+
+    if ((xmin >= xmax) || (ymin >= ymax)) {
+            printf("PSD_TOF_monitor: %s: Null detection area !\n"
+                   "ERROR        (xwidth,yheight,xmin,xmax,ymin,ymax). Exiting",
+           NAME_CURRENT_COMP);
+      exit(0);
+    }
+
+    if (tmin >= tmax) {
+      printf("PSD_TOF_monitor: %s: Unmeaningful TOF definition!\n",
+         NAME_CURRENT_COMP);
+      exit(0);
+    }
+
+    for (i=0; i<nx; i++){
+      for (j=0; j<ny; j++) {
+        for (k=0; k<nt; k++) {
+            PSD_p[k][i][j] = 0;
+            PSD_err[k][i][j] = 0;
+        }
+      }
+    }
+%}
+
+TRACE
+%{
+  int i,j,k;
+  double deuxtet, delta;
+  double t1;
+
+  if(vz>=0){
+    deuxtet=atan(vx/vz)*180/PI;
+  }
+  else if(vx<0){
+    deuxtet=atan(vx/vz)*180/PI-180;
+  }
+  else{
+    deuxtet=atan(vx/vz)*180/PI+180;
+  }
+
+  delta=atan(vy/sqrt(vz*vz+vx*vx))*180/PI;
+  
+  if (deuxtet>xmin && deuxtet<xmax){
+    if (delta>ymin && delta<ymax){
+      if (fabs(deuxtet)>1.8 || fabs(delta)>1.8){  
+        t1=radius/(sqrt(vx*vx+vy*vy+vz*vz));
+        
+        if ((1E6*(t+t1))>tmin && (1E6*(t+t1))<tmax)
+        {
+          i = floor((deuxtet - xmin)*nx/(xmax - xmin));
+          j = floor((delta - ymin)*ny/(ymax - ymin));
+          k = floor((1E6*(t+t1) - tmin)*nt/(tmax - tmin));
+
+          PSD_p[k][i][j] += p;
+          PSD_err[k][i][j] += p*p;
+          
+          SCATTER;
+        }
+        if (restore_neutron) {
+          RESTORE_NEUTRON(INDEX_CURRENT_COMP, x, y, z, vx, vy, vz, t, sx, sy, sz, p);
+        }
+      }
+    }
+  }
+%}
+
+SAVE
+%{
+  int kk, ii, jj;
+  char ff[256];
+  FILE *ffile;
+  double otime, ogamma, oQ, oQx, oQz, oP, olambda;
+  double srot;
+
+  srot = (float)sample_rot*PI/180.0;
+
+  sprintf(ff, "%s/%s_events.txt",mcdirname, filename);
+  ffile=fopen(ff,"a");
+  for (kk=0; kk<nt; kk++) {
+    otime = (float)tmin+(float)(kk)/(float)(nt)*((float)tmax-(float)tmin);
+    if (lambda_calc == 0){
+      otime = (float)otime+1430.0;
+      olambda = (float)otime*3956.0/160.4/1000000.0;
+    }
+    else{
+      otime = (float)otime+0.1+(1330.0*((float)otime-(float)tmin)/((float)tmax-(float)tmin));
+      olambda = (float)otime*3956.0/160.4/1000000.0;
+    }
+    
+    for (ii=0; ii<nx; ii++) {
+      ogamma = ((float)xmin+(float)(ii)/(float)(nx)*((float)xmax-(float)xmin))*PI/180.0;
+      oQx = ( cos((float)srot)*(cos((float)ogamma)-1.0)+sin((float)srot)*sin((float)ogamma))/(float)olambda;
+      oQz = (-sin((float)srot)*(cos((float)ogamma)-1.0)+cos((float)srot)*sin((float)ogamma))/(float)olambda;
+      oP  = 0.0;
+      
+      for (jj=0; jj<ny; jj++) {
+        if (PSD_p[kk][ii][jj]>0){
+          oP += PSD_p[kk][ii][jj];
+        }
+      }
+      if(oP>0){
+        fprintf(ffile, "%12.2f%12.8f%12.8f%12.2f\n",otime, oQx*a_param,oQz*a_param,oP);
+      }
+    }
+  }
+  fclose(ffile);
+%}
+
+MCDISPLAY
+%{
+  magnify("xz");
+  
+  int nelem=floor(xmax-xmin)+1;
+  int kk;
+  double ypos_min=radius*sin((ymin)*PI/180);
+  double ypos_max=radius*sin((ymax)*PI/180);
+
+  line(radius*sin((xmin)*PI/180),ypos_min,radius*cos((xmin)*PI/180),
+         radius*sin((xmin)*PI/180),ypos_max,radius*cos((xmin)*PI/180));
+  line(radius*sin((xmax)*PI/180),ypos_min,radius*cos((xmax)*PI/180),
+         radius*sin((xmax)*PI/180),ypos_max,radius*cos((xmax)*PI/180));
+  
+  for(kk=0; kk<nelem; kk++){
+    line(radius*sin((xmin+kk)*PI/180),ypos_min,radius*cos((xmin+kk)*PI/180),
+         radius*sin((xmin+kk+1)*PI/180),ypos_min,radius*cos((xmin+kk+1)*PI/180));
+    line(radius*sin((xmin+kk)*PI/180),ypos_max,radius*cos((xmin+kk)*PI/180),
+         radius*sin((xmin+kk+1)*PI/180),ypos_max,radius*cos((xmin+kk+1)*PI/180));
+  }
+%}
+
+END

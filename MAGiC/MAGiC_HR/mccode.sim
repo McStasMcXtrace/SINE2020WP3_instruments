@@ -1,0 +1,27 @@
+begin instrument:
+  Creator: mcstas 2.4.1
+  Source: MAGiC_elearning.instr
+  Parameters:  sample_rot
+  Trace_enabled: no
+  Default_main: yes
+  Embedded_runtime: yes
+end instrument
+
+begin simulation
+Date: Tue Jul 16 10 20 2019
+Ncount: 100000000
+Numpoints: 2
+Param: sample_rot = 0, sample_rot = 350
+end simulation
+
+begin data
+type: multiarray_1d(2)
+title: Scan of sample_rot
+xvars: sample_rot
+yvars: (L_out_I,L_out_ERR) (Mon_out2_I,Mon_out2_ERR)
+xlabel: 'sample_rot'
+ylabel: 'Intensity'
+xlimits: 0 350
+filename: mccode.dat
+variables: sample_rot L_out_I L_out_ERR Mon_out2_I Mon_out2_ERR
+end data

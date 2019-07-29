@@ -1,0 +1,70 @@
+McStas simulation description file for MAGiC_half_polarized.
+Date:    Tue Jul 16 10:26:06 2019
+Program: McStas 2.4.1 - Jun. 26, 2017
+
+begin instrument: MAGiC_half_polarized
+  File: MAGiC_HR/9/mccode
+  Source: MAGiC_elearning.instr
+  Parameters:  spectrum(double) high_res(double) coll_set(double) sample_rot(double)
+  Trace_enabled: yes
+  Default_main: yes
+  Embedded_runtime: yes
+end instrument
+
+begin simulation: MAGiC_HR/9
+  Format: McCode with text headers
+  URL: http://www.mccode.org
+  Creator: McStas 2.4.1 - Jun. 26, 2017
+  Instrument: MAGiC_elearning.instr
+  Ncount: 100000000
+  Trace: no
+  Gravitation: no
+  Seed: 1563292064
+  Directory: MAGiC_HR/9
+  Nodes: 40
+  Param: spectrum=0
+  Param: high_res=1
+  Param: coll_set=0.3
+end simulation
+
+begin data
+  Date: Tue Jul 16 10:26:45 2019 (1563265605)
+  type: array_1d(101)
+  Source: MAGiC_half_polarized (MAGiC_elearning.instr)
+  component: L_out
+  position: -0.034 -0.674259 159.42
+  title: Wavelength monitor
+  Ncount: 100000000
+  filename: L_out.txt
+  statistics: X0=1.43414; dX=0.35283;
+  signal: Min=0; Max=2.44361e+07; Mean=4.30397e+06;
+  values: 4.34701e+08 1.12741e+06 292253
+  xvar: L
+  yvar: (I,I_err)
+  xlabel: Wavelength [AA]
+  ylabel: Intensity
+  xlimits: 0.2 6
+  variables: L I I_err N
+end data
+
+begin data
+  Date: Tue Jul 16 10:26:45 2019 (1563265605)
+  type: array_2d(201, 201)
+  Source: MAGiC_half_polarized (MAGiC_elearning.instr)
+  component: Mon_out2
+  position: -0.034 -0.674259 159.42
+  title: PSD monitor
+  Ncount: 100000000
+  filename: Mon_out2.txt
+  statistics: X0=-0.00161071; dX=0.641545; Y0=-0.00772586; dY=0.382999;
+  signal: Min=0; Max=518459; Mean=79929;
+  values: 3.22921e+09 2.89598e+06 2.49471e+06
+  xvar: X 
+  yvar: Y 
+  xlabel: X position [cm]
+  ylabel: Y position [cm]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -1.5 1.5 -1.5 1.5
+  variables: I I_err N
+end data
