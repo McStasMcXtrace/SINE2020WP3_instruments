@@ -15,14 +15,17 @@
 * Example: lam0=2.0, dlam=1.8
 *
 * %P
-* lam0: [ÅÅ]          source median
-* dlam: [ÅÅ]          source deviation
-* samplerate_1: []    propability of hitting sample #1 (CoFe2O4)
-* samplerate_2: []    propability of hitting sample #2 (CoFe), accumulated with samplerate_1
+* lmax: [ÅÅ]        source min
+* lmin: [ÅÅ]        source max
+* T: [K]            propability of hitting sample #1 (CoFe2O4)
+* tau: [min]        propability of hitting sample #2 (CoFe), accumulated with samplerate_1
+* use_CoFe2O4 [1]   switches compound B on/off
+* use_CoFe [1]      switches compound A on/off
+* use_magn [1]      switches magnetic peak on/off
 *
 * %E
 *******************************************************************************/
-DEFINE INSTRUMENT ESS_HEIMDAL(lmax=4, lmin=0.5, samplerate_1=0.33, samplerate_2=0.66, T=400)
+DEFINE INSTRUMENT ESS_HEIMDAL(lmax=4, lmin=0.5, T=400, tau=0, use_CoFe2O4=1, use_CoFe=1, use_magn=1)
 
 
 DECLARE
@@ -35,27 +38,78 @@ DECLARE
   double Tc = 500;
   double lam0;
   double dlam;
+
+  double dfactor = 1;
+
+  struct pieceswisepars {
+    double min;
+    double max;
+    double* uppers;
+    double* slopes;
+    double* consts;
+  };
+  Itime_CoFe2O4 = 1; // reaction time dependent intensity factor for CoFe2O4
+  Itime_CoFe = 1; // reaction time dependent intensity factor for CoFe
+  struct pieceswisepars linpars1;
+  struct pieceswisepars linpars2;
 %}
+
 
 INITIALIZE
 %{
 // angular range
-det_th1=0;
-det_th2=180;
+det_th1 = 0;
+det_th2 = 180;
 // dhkl range
-det_d1=0.5;
-det_d2=5.5;
-det_rad=2;
-det_Linst=150+det_rad;
-tof=det_Linst/hm*lam0*1e6; // tof in [us]
-tofmin=det_Linst/hm*lmin*1e6; // tof in [us]
-tofmax=det_Linst/hm*lmax*1e6; // tof in [us]
-lam0=(lmax+lmin)/2.0;
-dlam=(lmax-lmin)/2.0;
+det_d1 = 0.5;
+det_d2 = 5.5;
+det_rad = 2;
+det_Linst = 150+det_rad;
+tof = det_Linst/hm*lam0*1e6; // tof in [us]
+tofmin = det_Linst/hm*lmin*1e6; // tof in [us]
+tofmax = det_Linst/hm*lmax*1e6; // tof in [us]
+lam0 = (lmax+lmin)/2.0;
+dlam = (lmax-lmin)/2.0;
 
-if (samplerate_2 < samplerate_1) {
-    printf("WARNING: samplerate_1 must be smaller than samplerate_2.");
-    exit(1);
+//
+// determine temperature-dependent d-spacing stretch
+dfactor = 0.1*mcipT/Tc + 1; // latices are scaled by 10% at Tc...
+
+//
+// determine Itime_CoFe2O4 and Itime_CoFe
+double min = 0;
+double u[3] = {3, 5, 8};
+double s[3] = {1.3, -2.9, .03};
+double c[3] = {14, 22, -80};
+
+linpars1.min = min;
+linpars1.uppers = u;
+linpars1.slopes = s;
+linpars1.consts = c;
+
+int piecewiselin(double x, double* val, struct pieceswisepars* fct, int sz) {
+  // NOTE: the user is responsible
+  double* u = fct->uppers;
+  double* s = fct->slopes;
+  double* c = fct->consts;
+  double min = fct->min;
+
+  // use first found segment
+  int i = 0;
+  double low, high;
+  for (i=0;i<sz;i++) {
+    // determine segment lower limit
+    if (i==0) low = min;
+    else low = u[i-1];
+
+    // determine segment upper limit
+    high = u[i];
+    if (low<=x && x<=high) {
+      *val = s[i]*x + c[i];
+      return 0;
+    }
+  }
+  return 1;
 }
 %}
 
@@ -88,46 +142,54 @@ AT (0, 0, 0.01) RELATIVE source
 
 
 //
-// SAMPLE
+// SAMPLES
 //
 SPLIT 32 COMPONENT SampleArm = Arm()
 AT (0, 0, 150) RELATIVE source
 
-// CoFe2O4, compound #1
-COMPONENT sample_1 = PowderN_dspace_factor (
-    dspace_factor=1,
-    d_phi=10,
-    radius=0.02,
-    yheight=0.07,
-    p_transmit=0,
-    reflections = "CoFe2O4_109044.txt")
-WHEN (samplechoice<samplerate_1)
-AT (0, 0, 150) RELATIVE source
-
-// CoFe, compound #2
+// CoFe, compound A
 COMPONENT sample_2 = PowderN_dspace_factor (
-    dspace_factor=1,
+    dspace_factor=dfactor,
     d_phi=10,
     radius=0.02,
     yheight=0.07,
     p_transmit=0,
     reflections = "CoFe_56273.txt")
-WHEN (samplechoice>=samplerate_1 && samplechoice<samplerate_2)
+WHEN (samplechoice>=0.33 && samplechoice<0.66 && use_CoFe==1)
 AT (0, 0, 150) RELATIVE source
+EXTEND %{
+    // peak intensity varies as a function of reaction time
+    p *= Itime_CoFe;
+%}
+
+// CoFe2O4, compound B
+COMPONENT sample_1 = PowderN_dspace_factor (
+    dspace_factor=dfactor,
+    d_phi=10,
+    radius=0.02,
+    yheight=0.07,
+    p_transmit=0,
+    reflections = "CoFe2O4_109044.txt")
+WHEN (samplechoice<0.33 && use_CoFe2O4==1)
+AT (0, 0, 150) RELATIVE source
+EXTEND %{
+    // peak intensity varies as a function of reaction time
+    p *= Itime_CoFe2O4;
+%}
 
 // magnetic peak
 COMPONENT Magnet =  PowderN_dspace_factor (
-    dspace_factor=1,
+    dspace_factor=dfactor,
     d_phi=10,
     radius=0.02,
     yheight=0.07,
     p_inc=0,
     p_transmit=0,
     reflections = "magnetic_peak.txt")
-WHEN (samplechoice>=samplerate_2)
+WHEN (samplechoice>=0.66)
 AT (0, 0, 150) RELATIVE source
 EXTEND %{
-    // diminishes peak intensity
+    // peak intensity diminishes as a function of temperature
     if (mcipT<Tc && mcipT>=0) {
       p *= (Tc-mcipT)/(mcipT);
     }
