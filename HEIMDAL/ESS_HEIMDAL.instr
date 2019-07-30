@@ -48,10 +48,10 @@ DECLARE
     double* slopes;
     double* consts;
   };
-  Itime_CoFe2O4 = 1; // reaction time dependent intensity factor for CoFe2O4
-  Itime_CoFe = 1; // reaction time dependent intensity factor for CoFe
-  struct pieceswisepars linpars1;
-  struct pieceswisepars linpars2;
+  double Itime_CoFe2O4; // reaction time dependent intensity factor for CoFe2O4
+  double Itime_CoFe; // reaction time dependent intensity factor for CoFe
+  struct pieceswisepars pars_CoFe2O4;
+  struct pieceswisepars pars_CoFe;
 %}
 
 
@@ -77,16 +77,6 @@ dfactor = 0.1*mcipT/Tc + 1; // latices are scaled by 10% at Tc...
 
 //
 // determine Itime_CoFe2O4 and Itime_CoFe
-double min = 0;
-double u[3] = {3, 5, 8};
-double s[3] = {1.3, -2.9, .03};
-double c[3] = {14, 22, -80};
-
-linpars1.min = min;
-linpars1.uppers = u;
-linpars1.slopes = s;
-linpars1.consts = c;
-
 int piecewiselin(double x, double* val, struct pieceswisepars* fct, int sz) {
   // NOTE: the user is responsible
   double* u = fct->uppers;
@@ -105,12 +95,43 @@ int piecewiselin(double x, double* val, struct pieceswisepars* fct, int sz) {
     // determine segment upper limit
     high = u[i];
     if (low<=x && x<=high) {
+      fprintf(stdout, "\nl:%1f h:%1f s:%1f c:%1f x:%1f", low, high, s[i], c[i], x);
       *val = s[i]*x + c[i];
-      return 0;
+      return s[i]*x + c[i];
+      //return 0;
     }
   }
   return 1;
 }
+
+// NOTE:  To enable simple particle weight multiplication, the chosen
+//        piecewiselin functions have a max value of 1 or less.
+
+double min = 0;
+double u[2] = {50, 300};
+double s[2] = {0, 1/250.0};
+double c[2] = {0, -50*1/250.0};
+pars_CoFe.min = min;
+pars_CoFe.uppers = u;
+pars_CoFe.slopes = s;
+pars_CoFe.consts = c;
+
+piecewiselin(mciptau, &Itime_CoFe, &pars_CoFe, 2);
+
+double min2 = 0;
+double u2[1] = {300};
+double s2[1] = {-0.2/300};
+double c2[1] = {0.4};
+pars_CoFe2O4.min = min2;
+pars_CoFe2O4.uppers = u2;
+pars_CoFe2O4.slopes = s2;
+pars_CoFe2O4.consts = c2;
+
+piecewiselin(mciptau, &Itime_CoFe2O4, &pars_CoFe2O4, 1);
+
+// DEBUG OUTPUT:
+//printf("\nCHECK: CoFe=%1f CoFe2O4=%1f\n", Itime_CoFe, Itime_CoFe2O4);
+//exit(1);
 %}
 
 
@@ -158,7 +179,7 @@ COMPONENT sample_2 = PowderN_dspace_factor (
 WHEN (samplechoice>=0.33 && samplechoice<0.66 && use_CoFe==1)
 AT (0, 0, 150) RELATIVE source
 EXTEND %{
-    // peak intensity varies as a function of reaction time
+    // peak intensity depends on reaction time
     p *= Itime_CoFe;
 %}
 
