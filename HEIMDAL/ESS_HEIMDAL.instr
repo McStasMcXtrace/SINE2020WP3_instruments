@@ -52,32 +52,11 @@ DECLARE
   double Itime_CoFe; // reaction time dependent intensity factor for CoFe
   struct pieceswisepars pars_CoFe2O4;
   struct pieceswisepars pars_CoFe;
-%}
+  int piecewiselin(double x, double* val, struct pieceswisepars* fct, int sz);
 
-
-INITIALIZE
-%{
-// angular range
-det_th1 = 0;
-det_th2 = 180;
-// dhkl range
-det_d1 = 0.5;
-det_d2 = 5.5;
-det_rad = 2;
-det_Linst = 150+det_rad;
-tof = det_Linst/hm*lam0*1e6; // tof in [us]
-tofmin = det_Linst/hm*lmin*1e6; // tof in [us]
-tofmax = det_Linst/hm*lmax*1e6; // tof in [us]
-lam0 = (lmax+lmin)/2.0;
-dlam = (lmax-lmin)/2.0;
-
-//
-// determine temperature-dependent d-spacing stretch
-dfactor = 0.1*mcipT/Tc + 1; // latices are scaled by 10% at Tc...
-
-//
-// determine Itime_CoFe2O4 and Itime_CoFe
-int piecewiselin(double x, double* val, struct pieceswisepars* fct, int sz) {
+  //
+  // determine Itime_CoFe2O4 and Itime_CoFe
+  int piecewiselin(double x, double* val, struct pieceswisepars* fct, int sz) {
   // NOTE: the user is responsible
   double* u = fct->uppers;
   double* s = fct->slopes;
@@ -103,6 +82,33 @@ int piecewiselin(double x, double* val, struct pieceswisepars* fct, int sz) {
   }
   return 1;
 }
+  
+%}
+
+
+INITIALIZE
+%{
+
+
+// angular range
+det_th1 = 0;
+det_th2 = 180;
+// dhkl range
+det_d1 = 0.5;
+det_d2 = 5.5;
+det_rad = 2;
+det_Linst = 150+det_rad;
+tof = det_Linst/hm*lam0*1e6; // tof in [us]
+tofmin = det_Linst/hm*lmin*1e6; // tof in [us]
+tofmax = det_Linst/hm*lmax*1e6; // tof in [us]
+lam0 = (lmax+lmin)/2.0;
+dlam = (lmax-lmin)/2.0;
+
+//
+// determine temperature-dependent d-spacing stretch
+dfactor = 0.1*mcipT/Tc + 1; // latices are scaled by 10% at Tc...
+
+
 
 // NOTE:  To enable simple particle weight multiplication, the chosen
 //        piecewiselin functions have a max value of 1 or less.
