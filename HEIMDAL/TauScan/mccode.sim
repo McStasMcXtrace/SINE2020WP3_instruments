@@ -1,0 +1,27 @@
+begin instrument:
+  Creator: mcstas 2.5
+  Source: ESS_HEIMDAL.instr
+  Parameters:  tau
+  Trace_enabled: no
+  Default_main: yes
+  Embedded_runtime: yes
+end instrument
+
+begin simulation
+Date: Wed Aug 14 15 22 2019
+Ncount: 1000000
+Numpoints: 2
+Param: tau = 0, tau = 300
+end simulation
+
+begin data
+type: multiarray_1d(2)
+title: Scan of tau
+xvars: tau
+yvars: (psd_source_I,psd_source_ERR) (npi_tof_dhkl_detector_I,npi_tof_dhkl_detector_ERR) (psdtof_I,psdtof_ERR) (psdtofDetail_I,psdtofDetail_ERR)
+xlabel: 'tau'
+ylabel: 'Intensity'
+xlimits: 0 300
+filename: mccode.dat
+variables: tau psd_source_I psd_source_ERR npi_tof_dhkl_detector_I npi_tof_dhkl_detector_ERR psdtof_I psdtof_ERR psdtofDetail_I psdtofDetail_ERR
+end data
