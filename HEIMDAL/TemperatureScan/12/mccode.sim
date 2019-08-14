@@ -1,0 +1,118 @@
+McStas simulation description file for ESS_HEIMDAL.
+Date:    Wed Aug 14 12:13:39 2019
+Program: McStas 2.5 - Dec. 12, 2018
+
+begin instrument: ESS_HEIMDAL
+  File: TemperatureScan/12/mccode
+  Source: ESS_HEIMDAL.instr
+  Parameters:  lmax(double) lmin(double) T(double) tau(double) use_CoFe2O4(double) use_CoFe(double) use_magn(double)
+  Trace_enabled: yes
+  Default_main: yes
+  Embedded_runtime: yes
+end instrument
+
+begin simulation: TemperatureScan/12
+  Format: McCode with text headers
+  URL: http://www.mccode.org
+  Creator: McStas 2.5 - Dec. 12, 2018
+  Instrument: ESS_HEIMDAL.instr
+  Ncount: 100000
+  Trace: no
+  Gravitation: no
+  Seed: 1565850530
+  Directory: TemperatureScan/12
+  Nodes: 4
+  Param: lmax=4
+  Param: lmin=0.5
+  Param: T=250
+  Param: tau=0
+  Param: use_CoFe2O4=1
+  Param: use_CoFe=1
+  Param: use_magn=1
+end simulation
+
+begin data
+  Date: Wed Aug 14 12:13:40 2019 (1565777620)
+  type: array_2d(40, 40)
+  Source: ESS_HEIMDAL (ESS_HEIMDAL.instr)
+  component: psd_source
+  position: 0 0 0.01
+  title: PSD monitor
+  Ncount: 100000
+  filename: PSD_source.dat
+  statistics: X0=-0.002025; dX=5.00958; Y0=0.0085125; dY=5.00385;
+  signal: Min=0; Max=7.42323e+06; Mean=2.13803e+06;
+  values: 3.42084e+09 1.08177e+07 100000
+  xvar: X 
+  yvar: Y 
+  xlabel: X position [cm]
+  ylabel: Y position [cm]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: -15 15 -15 15
+  variables: I I_err N
+end data
+
+begin data
+  Date: Wed Aug 14 12:13:40 2019 (1565777620)
+  type: array_1d(3000)
+  Source: ESS_HEIMDAL (ESS_HEIMDAL.instr)
+  component: npi_tof_dhkl_detector
+  position: 0 0 150
+  title: ToF to dhkl detector
+  Ncount: 100000
+  filename: dhkl.dat
+  statistics: X0=2.61416; dX=1.65221;
+  signal: Min=0; Max=387379; Mean=2896.11;
+  values: 8.68833e+06 19996.9 2.61689e+06
+  xvar: d
+  yvar: (I,I_err)
+  xlabel: dhkl [AA]
+  ylabel: Intensity
+  xlimits: 0.5 5.5
+  variables: d I I_err N
+end data
+
+begin data
+  Date: Wed Aug 14 12:13:40 2019 (1565777620)
+  type: array_2d(600, 800)
+  Source: ESS_HEIMDAL (ESS_HEIMDAL.instr)
+  component: psdtof
+  position: 0 0 150
+  title: Cylindrical monitor ToF x 2theta
+  Ncount: 100000
+  filename: tof_theta.dat
+  statistics: X0=85.069; dX=55.7806; Y0=72460.2; dY=36504.7;
+  signal: Min=0; Max=14115.1; Mean=24.7634;
+  values: 1.18864e+07 25756.5 2.8423e+06
+  xvar: Sc
+  yvar: Ti
+  xlabel: Scattering angle [deg]
+  ylabel: Time-of-flight [\gms]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: 0 180 18250.6 161374
+  variables: I I_err N
+end data
+
+begin data
+  Date: Wed Aug 14 12:13:40 2019 (1565777620)
+  type: array_2d(400, 400)
+  Source: ESS_HEIMDAL (ESS_HEIMDAL.instr)
+  component: psdtofDetail
+  position: 0 0 150
+  title: Cylindrical monitor ToF x 2theta
+  Ncount: 100000
+  filename: tof_theta_detail.dat
+  statistics: X0=77.7881; dX=1.25109; Y0=103803; dY=2642.71;
+  signal: Min=0; Max=75.5108; Mean=0.0193304;
+  values: 3092.87 215.773 4226
+  xvar: Sc
+  yvar: Ti
+  xlabel: Scattering angle [deg]
+  ylabel: Time-of-flight [\gms]
+  zvar: I
+  zlabel: Signal per bin
+  xylimits: 75 80 100000 110000
+  variables: I I_err N
+end data

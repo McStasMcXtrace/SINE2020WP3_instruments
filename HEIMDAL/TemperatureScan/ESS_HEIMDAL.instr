@@ -1,0 +1,275 @@
+/*******************************************************************************
+* Instrument: ESS_HEIMDAL
+*
+* %I
+* Written by: Peter Willendrup and Jakob Garde
+* Date: June 2019
+* Origin: DTU
+* %INSTRUMENT_SITE: ESS
+*
+* Simplistic ToF Diffractometer HEIMDAL@ESS
+*
+* %D
+* <instrument description>
+*
+* Example: lam0=2.0, dlam=1.8
+*
+* %P
+* lmax: [ÅÅ]        source min
+* lmin: [ÅÅ]        source max
+* T: [K]            propability of hitting sample #1 (CoFe2O4)
+* tau: [min]        propability of hitting sample #2 (CoFe), accumulated with samplerate_1
+* use_CoFe2O4 [1]   switches compound B on/off
+* use_CoFe [1]      switches compound A on/off
+* use_magn [1]      switches magnetic peak on/off
+*
+* %E
+*******************************************************************************/
+DEFINE INSTRUMENT ESS_HEIMDAL(lmax=4, lmin=0.5, T=400, tau=0, use_CoFe2O4=1, use_CoFe=1, use_magn=1)
+
+
+DECLARE
+%{
+  double tof,tofmin,tofmax;
+  double det_th1, det_th2;
+  double det_rad,det_Linst,det_t0,det_d1,det_d2;
+  double hm = 2*PI*K2V; // h/m_n
+  double samplechoice = 0;
+  double Tc = 500;
+  double lam0;
+  double dlam;
+
+  double dfactor = 1;
+
+  struct pieceswisepars {
+    double min;
+    double max;
+    double* uppers;
+    double* slopes;
+    double* consts;
+  };
+  double Itime_CoFe2O4; // reaction time dependent intensity factor for CoFe2O4
+  double Itime_CoFe; // reaction time dependent intensity factor for CoFe
+  struct pieceswisepars pars_CoFe2O4;
+  struct pieceswisepars pars_CoFe;
+  int piecewiselin(double x, double* val, struct pieceswisepars* fct, int sz);
+
+  //
+  // determine Itime_CoFe2O4 and Itime_CoFe
+  int piecewiselin(double x, double* val, struct pieceswisepars* fct, int sz) {
+  // NOTE: the user is responsible
+  double* u = fct->uppers;
+  double* s = fct->slopes;
+  double* c = fct->consts;
+  double min = fct->min;
+
+  // use first found segment
+  int i = 0;
+  double low, high;
+  for (i=0;i<sz;i++) {
+    // determine segment lower limit
+    if (i==0) low = min;
+    else low = u[i-1];
+
+    // determine segment upper limit
+    high = u[i];
+    if (low<=x && x<=high) {
+      fprintf(stdout, "\nl:%1f h:%1f s:%1f c:%1f x:%1f", low, high, s[i], c[i], x);
+      *val = s[i]*x + c[i];
+      return s[i]*x + c[i];
+      //return 0;
+    }
+  }
+  return 1;
+}
+  
+%}
+
+
+INITIALIZE
+%{
+
+
+// angular range
+det_th1 = 0;
+det_th2 = 180;
+// dhkl range
+det_d1 = 0.5;
+det_d2 = 5.5;
+det_rad = 2;
+det_Linst = 150+det_rad;
+tof = det_Linst/hm*lam0*1e6; // tof in [us]
+tofmin = det_Linst/hm*lmin*1e6; // tof in [us]
+tofmax = det_Linst/hm*lmax*1e6; // tof in [us]
+lam0 = (lmax+lmin)/2.0;
+dlam = (lmax-lmin)/2.0;
+
+//
+// determine temperature-dependent d-spacing stretch
+dfactor = 0.01*mcipT/Tc + 1; // latices are scaled by 1% at Tc...
+
+
+
+// NOTE:  To enable simple particle weight multiplication, the chosen
+//        piecewiselin functions have a max value of 1 or less.
+
+double min = 0;
+double u[2] = {50, 300};
+double s[2] = {0, 1/250.0};
+double c[2] = {0, -50*1/250.0};
+pars_CoFe.min = min;
+pars_CoFe.uppers = u;
+pars_CoFe.slopes = s;
+pars_CoFe.consts = c;
+
+piecewiselin(mciptau, &Itime_CoFe, &pars_CoFe, 2);
+
+double min2 = 0;
+double u2[1] = {300};
+double s2[1] = {-0.2/300};
+double c2[1] = {0.4};
+pars_CoFe2O4.min = min2;
+pars_CoFe2O4.uppers = u2;
+pars_CoFe2O4.slopes = s2;
+pars_CoFe2O4.consts = c2;
+
+piecewiselin(mciptau, &Itime_CoFe2O4, &pars_CoFe2O4, 1);
+
+// DEBUG OUTPUT:
+//printf("\nCHECK: CoFe=%1f CoFe2O4=%1f\n", Itime_CoFe, Itime_CoFe2O4);
+//exit(1);
+%}
+
+
+TRACE
+
+COMPONENT origin = Progress_bar()
+AT (0, 0, 0) RELATIVE ABSOLUTE
+
+COMPONENT source = Source_simple(
+    lambda0=lam0,
+    dlambda=dlam,
+    target_index=3,
+    focus_xw=0.01,
+    focus_yh=0.07,
+    flux=1e14)
+AT (0,0,0) RELATIVE PREVIOUS
+EXTEND %{
+  samplechoice=rand01();
+%}
+
+COMPONENT psd_source = PSD_monitor(
+    filename="PSD_source.dat",
+    nx=40,
+    ny=40,
+    xwidth=0.3,
+    yheight=0.3,
+    restore_neutron=1)
+AT (0, 0, 0.01) RELATIVE source
+
+
+//
+// SAMPLES
+//
+SPLIT 32 COMPONENT SampleArm = Arm()
+AT (0, 0, 150) RELATIVE source
+
+// CoFe, compound A
+COMPONENT sample_2 = PowderN_dspace_factor (
+    dspace_factor=dfactor,
+    d_phi=10,
+    radius=0.005,
+    yheight=0.07,
+    p_transmit=0,
+    reflections = "CoFe_56273.txt")
+WHEN (samplechoice>=0.43 && samplechoice<0.86 && use_CoFe==1)
+AT (0, 0, 150) RELATIVE source
+EXTEND %{
+    // peak intensity depends on reaction time
+    p *= Itime_CoFe;
+%}
+
+// CoFe2O4, compound B
+COMPONENT sample_1 = PowderN_dspace_factor (
+    dspace_factor=dfactor,
+    d_phi=10,
+    radius=0.005,
+    yheight=0.07,
+    p_transmit=0,
+    reflections = "CoFe2O4_109044.txt")
+WHEN (samplechoice<0.43 && use_CoFe2O4==1)
+AT (0, 0, 150) RELATIVE source
+EXTEND %{
+    // peak intensity varies as a function of reaction time
+    p *= Itime_CoFe2O4;
+%}
+
+// magnetic peak
+COMPONENT Magnet =  PowderN_dspace_factor (
+    dspace_factor=dfactor,
+    d_phi=10,
+    radius=0.001,
+    yheight=0.07,
+    p_inc=0,
+    p_transmit=0,
+    reflections = "magnetic_peak.txt")
+WHEN (samplechoice>=0.86)
+AT (0, 0, 150) RELATIVE source
+EXTEND %{
+    // peak intensity diminishes as a function of temperature
+    if (mcipT<Tc && mcipT>=0) {
+      p *= (Tc-mcipT)/(mcipT);
+    }
+    else
+        ABSORB;
+%}
+
+
+//
+// DETECTOR
+//
+
+
+COMPONENT npi_tof_dhkl_detector = NPI_tof_dhkl_detector(
+    nd=3000,
+    filename="dhkl.dat",
+    yheight=1.0,
+    zdepth=0.01,
+    radius=det_rad,
+    amin=det_th1,
+    amax=det_th2,
+    d_min=det_d1,
+    d_max=det_d2,
+    time0=0,
+    Linst=152,
+    Lc=0,
+    res_x=0.002,
+    res_y=0.005,
+    res_t=1e-6,
+    mu=1.0,
+    modulation=0,
+    mod_dt=0,
+    mod_twidth=0,
+    mod_shift=0,
+    mod_d0_table="dhkl.tab",
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE sample_1
+
+
+// ToF vs. 2theta map
+COMPONENT psdtof = NPI_tof_theta_monitor(
+    nt = 800, na = 600, filename = "tof_theta.dat",
+    radius = 2, yheight = 1, tmin = 0.95*tofmin, tmax = tofmax*1.05,
+    amin = det_th1, amax = det_th2, restore_neutron = 1,verbose=0)
+AT (0, 0, 0) RELATIVE sample_1
+
+// ToF vs. 2theta map, detail
+COMPONENT psdtofDetail= NPI_tof_theta_monitor(
+    nt = 400, na = 400, filename = "tof_theta_detail.dat",
+    radius = 2, yheight = 1, tmin = 100e3, tmax = 110e3,
+    amin = 75, amax = 80, restore_neutron = 1,verbose=0)
+AT (0, 0, 0) RELATIVE sample_1
+
+
+
+END

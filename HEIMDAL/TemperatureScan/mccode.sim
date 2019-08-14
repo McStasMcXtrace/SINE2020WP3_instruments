@@ -1,0 +1,27 @@
+begin instrument:
+  Creator: mcstas 2.5
+  Source: ESS_HEIMDAL.instr
+  Parameters:  T
+  Trace_enabled: no
+  Default_main: yes
+  Embedded_runtime: yes
+end instrument
+
+begin simulation
+Date: Wed Aug 14 12 13 2019
+Ncount: 100000
+Numpoints: 2
+Param: T = 10, T = 490
+end simulation
+
+begin data
+type: multiarray_1d(2)
+title: Scan of T
+xvars: T
+yvars: (psd_source_I,psd_source_ERR) (npi_tof_dhkl_detector_I,npi_tof_dhkl_detector_ERR) (psdtof_I,psdtof_ERR) (psdtofDetail_I,psdtofDetail_ERR)
+xlabel: 'T'
+ylabel: 'Intensity'
+xlimits: 10 490
+filename: mccode.dat
+variables: T psd_source_I psd_source_ERR npi_tof_dhkl_detector_I npi_tof_dhkl_detector_ERR psdtof_I psdtof_ERR psdtofDetail_I psdtofDetail_ERR
+end data
