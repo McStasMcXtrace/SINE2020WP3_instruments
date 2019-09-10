@@ -325,7 +325,7 @@ TRACE
         radius = 0.01, reflections = "C60.lau", mosaic=30,
         ax=0, ay=0, az=14.408,
         bx=14.408, by=0, bz=0,
-        cx=0, cy=14.408, cz=0)
+        cx=0, cy=14.408, cz=0, p_transmit=1e-6)
     AT (0, 0, 0) RELATIVE PREVIOUS
     ROTATED(0, sample_rot, 0) RELATIVE PREVIOUS
 

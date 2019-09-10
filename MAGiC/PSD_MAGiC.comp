@@ -141,7 +141,7 @@ SAVE
   double otime, ogamma, oQ, oQx, oQz, oP, olambda;
   double srot;
 
-  srot = (float)sample_rot*PI/180.0;
+  srot = (float)RotatedAngle*PI/180.0;
 
   sprintf(ff, "%s/%s_events.txt",mcdirname, filename);
   ffile=fopen(ff,"a");
