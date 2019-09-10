@@ -15,6 +15,6 @@ set(gca,'ydir','normal')
 xlabel('d-spacing [AA]')
 ylabel('Temperature / [K]')
 
-unix('rm tempzip.zip');
+unix(['mv tempzip.zip ' directory '.zip']);
 
 eval(['print -depsc ' directory '.eps'])

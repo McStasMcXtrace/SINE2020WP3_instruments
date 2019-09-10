@@ -15,6 +15,6 @@ set(gca,'ydir','normal')
 xlabel('d-spacing [AA]')
 ylabel('Reaction time / [min]')
 set(gca,'xlim',[1.4 2.1])
-unix('rm tempzip.zip');
+unix(['mv tempzip.zip ' directory '.zip']);
 
 eval(['print -depsc ' directory '.eps'])
