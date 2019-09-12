@@ -1,0 +1,192 @@
+DEFINE INSTRUMENT MAGiC_half_polarized(spectrum=0, high_res=0, coll_set=0.3, string MCPLfile="something.mcpl.gz", repeat=1, SPLITS=1, sample_rot)
+
+DECLARE
+%{
+    double lfeed, dfeed_chop;
+    double dchop_guide, l1;
+    double rot1, rot2;
+    double l3,l4,l5,l6,l7;
+    double xaxis, yaxis;
+    double WaveMin, WaveMax, Lambda0, dLambda;
+    double sample_dist;
+    double inx, iny, outx, outy, inxfeed, inyfeed, slity,slitx;
+    double temp1, temp2;
+    
+    double bend_x, bend_ang;
+    double Linx=4, Loutx=1.9, Liny=4.3, Louty=1.5, rot1=0.2344, pol=0;
+    double flight_min,flight_max;
+    int nchan=6;
+    double l2=3;
+
+    int coldornot;
+
+    double elliptic_dim_calc(double Fin, double Fout, double bb, double length){
+        double ah, bh, ch, xh;
+        
+        bh=bb/2;
+        ch = (Fin+Fout+length)/2.;
+        ah = sqrt(bh*bh+ch*ch);
+        xh = -ch+Fin;
+
+        temp1 = bh*bh*(1.-(xh*xh/(ah*ah)));
+        temp1 = 2*sqrt(temp1);
+        xh=xh+length;
+        temp2 = bh*bh*(1.-(xh*xh/(ah*ah)));
+        temp2 = 2*sqrt(temp2);  
+    }
+    double RotatedAngle;
+    Rotation R;
+    char monopts[256];
+%}
+
+INITIALIZE
+%{
+    if(spectrum == 1){
+        coldornot = 1;
+    }
+    else{
+        coldornot = 0;
+    }
+
+	dchop_guide=0.5;
+    l1=74;
+    l3=67+1.5;
+    l4=4;
+    l5=0.5;
+    l6=0.5;
+    l7=0.5;
+    
+    xaxis=0.08;
+    yaxis=0.08;
+    
+    sample_dist=1.5;
+    
+    if(coldornot==0) 
+    {
+        WaveMin=0.2;
+        WaveMax=6;
+        flight_min = 160.4*0.6/3956;
+        flight_max = 160.4*2.3/3956;
+    }
+    else
+    {
+        WaveMin=0.2;
+        WaveMax=6;
+        flight_min = 160.4*2.0/3956;
+        flight_max = 160.4*3.7/3956;
+    }
+    
+    nchan= round(nchan);
+    
+    // First ellipse calculations
+    elliptic_dim_calc(Linx,Loutx+l2+l3,xaxis,l1);
+    inx = temp2;
+    slitx=temp1;
+    elliptic_dim_calc(Liny,Louty+l2+l3,yaxis,l1);
+    iny = temp2;
+    slity=temp1;
+    
+    // Second ellipse calculations
+    elliptic_dim_calc(Linx+l1+l2,Loutx,xaxis,l3);
+    outx = temp2;
+    elliptic_dim_calc(Liny+l2+l1,Louty,yaxis,l3);
+    outy = temp2;
+
+    sprintf(monopts, "sphere, list all neutrons");//, flight_min,flight_max);
+%}
+
+TRACE
+	
+    // Sample position
+COMPONENT Status = Progress_bar()
+  	AT (0,0,0) ABSOLUTE
+
+COMPONENT sample_pos= MCPL_input(polarisationuse=1,filename=MCPLfile, repeat_count=repeat, pos_smear=0.001, E_smear=0.01, dir_smear=0.001)
+	AT (0,0,0) ABSOLUTE
+
+	/****************************************************
+	/*
+	/*        Beam monitoring at sample position
+	/*
+	/****************************************************/
+	// Check brilliance
+	COMPONENT L_out = L_monitor(
+		xwidth=0.005,yheight=0.005,
+		nL=101, filename="L_out.txt", Lmin=WaveMin, Lmax=WaveMax,restore_neutron=1)
+	AT (0,0,0) RELATIVE PREVIOUS
+	
+	// Control beam shape
+	COMPONENT Mon_out2 = PSD_monitor(
+		nx = 201, ny = 201, filename = "Mon_out2.txt", xwidth = 0.03,
+		yheight = 0.03,restore_neutron=1)
+	AT (0, 0, 0) RELATIVE PREVIOUS
+
+
+/* now we should rotate the neutron by RotateNeutron angle to bring to a randoom incoming direction in the horizontal plane */
+COMPONENT RotateNeutron = Arm()
+  AT (0,0,0)       RELATIVE sample_pos
+  EXTEND %{
+
+/* this code is copied from Rotator.comp which parameters are set static at INIT
+ * here we want a dynamic rotation for every neutron
+ * the rotation angle must be computed modulo the maximum divergence, so that we 
+ * retain the full beam divergence on the analyser.
+ * The max divergence is given by the deflector size seen from the sample, adding
+ * the sample size. Deflector: width=0.05, height=9*1.5e-2
+ */
+
+  RotatedAngle=rand01()*360.0;
+    
+    rot_set_rotation(R, 0, RotatedAngle, 0); /* will rotate neutron instead of comp: negative side */
+    /* apply rotation to centered coordinates */
+    coords_get(rot_apply(R, coords_set(x,y,z)),    &x, &y, &z);
+    /* rotate speed */
+    coords_get(rot_apply(R, coords_set(vx,vy,vz)), &vx, &vy, &vz);
+       
+  %}
+
+  
+    // Single crystal to work with
+    SPLIT SPLITS COMPONENT sample = Single_crystal(
+        radius = 0.01, reflections = "C60.lau", mosaic=30,
+        ax=0, ay=0, az=14.408,
+        bx=14.408, by=0, bz=0,
+        cx=0, cy=14.408, cz=0, p_transmit=1e-6, order=1)
+    AT (0, 0, 0) RELATIVE PREVIOUS
+    ROTATED(0, sample_rot, 0) RELATIVE PREVIOUS
+
+
+/* compensate the initial rotation: rotate back to recover vertical beam distribution */
+  COMPONENT RotBack = Arm()
+  AT (0, 0, 0)     RELATIVE sample
+  EXTEND %{
+    
+   rot_set_rotation(R, 0, -RotatedAngle, 0); 
+
+    coords_get(rot_apply(R, coords_set(x,y,z)),    &x, &y, &z);
+
+    coords_get(rot_apply(R, coords_set(vx,vy,vz)), &vx, &vy, &vz);
+  %}
+ 
+    /* Event-monitor based on Monitor_nD, stores neutron event and sample rotation */
+    /*  COMPONENT Events = Monitor_nD(radius=1, options=monopts, user1=RotatedAngle)
+	AT (0, 0, 0)     RELATIVE sample */
+
+ COMPONENT Sphere = PSD_monitor_4PI(filename="sphere")
+  AT (0,0,0) RELATIVE sample
+  EXTEND %{
+   // printf("x: %g, y: %g, z: %g, vx: %g, vy: %g, vz: %g\n",x,y,z,vx,vy,vz);
+   %}
+
+  
+   COMPONENT Events = Monitor_nD(radius=2.2, yheight=0.1, options="sphere theta limits=[10 70] bins=128 y bins=128")//, user1=RotatedAngle)
+  AT (0, 0, 0) RELATIVE sample
+
+  
+    // Q-space detector in a single plane
+    //  COMPONENT Detector = PSD_MAGiC(
+    //				   sample_rot = RotatedAngle, a_param=14.408, nx = 501, ny = 17, nt = 357, filename = "TOF",
+    //  xmin=10, xmax=70, ymin=-3, ymax=3, tmin=flight_min*1e6, tmax=flight_max*1e6, radius=1,
+    //  lambda_calc = high_res)
+    //AT (0,0,0+0.00001) RELATIVE Mon_out2
+END
