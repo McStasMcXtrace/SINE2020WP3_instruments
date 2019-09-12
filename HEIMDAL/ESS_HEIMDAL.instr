@@ -18,7 +18,7 @@
 * lmax: [AA]        source min
 * lmin: [AA]        source max
 * T: [C]            temperature 
-* tau: [min]        reaction time - from 0 to 300 mins
+* tau: [min]        reaction time - from 0 to 600 mins
 * use_CoFe2O4 [1]   switches compound B on/off
 * use_CoFe [1]      switches compound A on/off
 * use_magn [1]      switches magnetic peak on/off
@@ -31,7 +31,7 @@
 *
 * %E
 *******************************************************************************/
-DEFINE INSTRUMENT ESS_HEIMDAL(HighRes=0,lmax=2.35, lmin=0.65, T=400, tau=0, use_CoFe2O4=1, use_CoFe=1, use_magn=1, dmin=0.5, dmax=5.5, f1=1, f2=1, f3=1)
+DEFINE INSTRUMENT ESS_HEIMDAL(HighRes=0,lmax=2.35, lmin=0.65, T=400, tau=0, use_CoFe2O4=1, use_CoFe=1, use_magn=1, dmin=0.5, dmax=5.5, f1=0.5, f2=1, f3=1)
 
 DECLARE
 %{
@@ -116,7 +116,7 @@ dfactor = 0.02*mcipT/Tc + 1; // latices are scaled by 1% at Tc...
 //        piecewiselin functions have a max value of 1 or less.
 
 double min = 0;
-double u[2] = {50, 300};
+double u[2] = {50, 600};
 double s[2] = {0, 1/250.0};
 double c[2] = {0, -50*1/250.0};
 pars_CoFe.min = min;
@@ -232,6 +232,7 @@ EXTEND %{
     if (mcipT<Tc && mcipT>=0) {
       p *= (Tc-mcipT)/(Tc);
       p *= mcipf3;
+      p *= Itime_CoFe2O4;
     }
     else
         ABSORB;
