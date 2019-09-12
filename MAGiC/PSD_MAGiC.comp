@@ -97,6 +97,8 @@ TRACE
   double deuxtet, delta;
   double t1;
 
+  /* atan lines below are likely just a complicated way of doing
+     an atan2 ?? */
   if(vz>=0){
     deuxtet=atan(vx/vz)*180/PI;
   }
@@ -108,10 +110,17 @@ TRACE
   }
 
   delta=atan(vy/sqrt(vz*vz+vx*vx))*180/PI;
+
+  /* Maybe all of the atan2 and time-oriented lines here could be replaced by 
+     1) cylinder_intersect to find the time
+     2) PROP_DT
+     3) Look where the neutron hit
+  */
   
   if (deuxtet>xmin && deuxtet<xmax){
     if (delta>ymin && delta<ymax){
-      if (fabs(deuxtet)>1.8 || fabs(delta)>1.8){  
+      if (fabs(deuxtet)>1.8 || fabs(delta)>1.8){
+	
         t1=radius/(sqrt(vx*vx+vy*vy+vz*vz));
         
         if ((1E6*(t+t1))>tmin && (1E6*(t+t1))<tmax)
@@ -120,6 +129,8 @@ TRACE
           j = floor((delta - ymin)*ny/(ymax - ymin));
           k = floor((1E6*(t+t1) - tmin)*nt/(tmax - tmin));
 
+	  /*Is it correcly understood that we now have a binning in 2 angles and time? */
+	  
           PSD_p[k][i][j] += p;
           PSD_err[k][i][j] += p*p;
           
@@ -141,12 +152,14 @@ SAVE
   double otime, ogamma, oQ, oQx, oQz, oP, olambda;
   double srot;
 
-  srot = (float)sample_rot*PI/180.0;
+  srot = sample_rot*PI/180.0;
 
   sprintf(ff, "%s/%s_events.txt",mcdirname, filename);
   ffile=fopen(ff,"a");
   for (kk=0; kk<nt; kk++) {
     otime = (float)tmin+(float)(kk)/(float)(nt)*((float)tmax-(float)tmin);
+
+    /* Comments on what these calculations actually do would be welcome... */
     if (lambda_calc == 0){
       otime = (float)otime+1430.0;
       olambda = (float)otime*3956.0/160.4/1000000.0;
@@ -155,19 +168,26 @@ SAVE
       otime = (float)otime+0.1+(1330.0*((float)otime-(float)tmin)/((float)tmax-(float)tmin));
       olambda = (float)otime*3956.0/160.4/1000000.0;
     }
+    /* Looks like we now have a time and wavelength, calculated in two different ways depending on
+       the "high-res" (==lambda_calc) mode ? */
     
     for (ii=0; ii<nx; ii++) {
+      /* Is gamma the in-plane angle? */
       ogamma = ((float)xmin+(float)(ii)/(float)(nx)*((float)xmax-(float)xmin))*PI/180.0;
       oQx = ( cos((float)srot)*(cos((float)ogamma)-1.0)+sin((float)srot)*sin((float)ogamma))/(float)olambda;
       oQz = (-sin((float)srot)*(cos((float)ogamma)-1.0)+cos((float)srot)*sin((float)ogamma))/(float)olambda;
       oP  = 0.0;
-      
+
+      /* And now we "collapse" the signal vertically?? */
       for (jj=0; jj<ny; jj++) {
         if (PSD_p[kk][ii][jj]>0){
           oP += PSD_p[kk][ii][jj];
         }
       }
+      /* Only record the "event" if there is a signal to see... */
+      /* a_param is the lattice constant I guess? */
       if(oP>0){
+	/* Perhaps %g would be better here for oP? Otherwise we filter again on the weight */
         fprintf(ffile, "%12.2f%12.8f%12.8f%12.2f\n",otime, oQx*a_param,oQz*a_param,oP);
       }
     }

@@ -300,7 +300,7 @@ TRACE
 	AT (0,0,l7+0.005) RELATIVE PREVIOUS
 	
     // Sample position
-	COMPONENT sample_pos= Arm()
+    COMPONENT sample_pos= MCPL_output(polarisationuse=1,filename="MAGiC_HR")
 	AT (0,0,sample_dist) RELATIVE el2_out
 
 	/****************************************************
@@ -311,28 +311,28 @@ TRACE
 	// Check brilliance
 	COMPONENT L_out = L_monitor(
 		xwidth=0.005,yheight=0.005,
-		nL=101, filename="L_out.txt", Lmin=WaveMin, Lmax=WaveMax)
+		nL=101, filename="L_out.txt", Lmin=WaveMin, Lmax=WaveMax,restore_neutron=1)
 	AT (0,0,0) RELATIVE PREVIOUS
 	
 	// Control beam shape
 	COMPONENT Mon_out2 = PSD_monitor(
 		nx = 201, ny = 201, filename = "Mon_out2.txt", xwidth = 0.03,
-		yheight = 0.03)
+		yheight = 0.03,restore_neutron=1)
 	AT (0, 0, 0) RELATIVE PREVIOUS
 
-    // Single crystal to work with
-    SPLIT 1000 COMPONENT sample = Single_crystal(
-        radius = 0.01, reflections = "C60.lau", mosaic=30,
-        ax=0, ay=0, az=14.408,
-        bx=14.408, by=0, bz=0,
-        cx=0, cy=14.408, cz=0, p_transmit=1e-6)
-    AT (0, 0, 0) RELATIVE PREVIOUS
-    ROTATED(0, sample_rot, 0) RELATIVE PREVIOUS
+    /* // Single crystal to work with */
+    /* SPLIT 1000 COMPONENT sample = Single_crystal( */
+    /*     radius = 0.01, reflections = "C60.lau", mosaic=30, */
+    /*     ax=0, ay=0, az=14.408, */
+    /*     bx=14.408, by=0, bz=0, */
+    /*     cx=0, cy=14.408, cz=0, p_transmit=1e-6) */
+    /* AT (0, 0, 0) RELATIVE PREVIOUS */
+    /* ROTATED(0, sample_rot, 0) RELATIVE PREVIOUS */
 
-    // Q-space detector in a single plane
-    COMPONENT Detector = PSD_MAGiC(
-        sample_rot = sample_rot, a_param=14.408, nx = 501, ny = 17, nt = 357, filename = "TOF",
-        xmin=10, xmax=70, ymin=-3, ymax=3, tmin=flight_min*1e6, tmax=flight_max*1e6, radius=1,
-        lambda_calc = high_res)
-    AT (0,0,0+0.00001) RELATIVE Mon_out2
+    /* // Q-space detector in a single plane */
+    /* COMPONENT Detector = PSD_MAGiC( */
+    /*     sample_rot = sample_rot, a_param=14.408, nx = 501, ny = 17, nt = 357, filename = "TOF", */
+    /*     xmin=10, xmax=70, ymin=-3, ymax=3, tmin=flight_min*1e6, tmax=flight_max*1e6, radius=1, */
+    /*     lambda_calc = high_res) */
+    /* AT (0,0,0+0.00001) RELATIVE Mon_out2 */
 END
