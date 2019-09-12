@@ -108,7 +108,7 @@ dlam = (lmax-lmin)/2.0;
 
 //
 // determine temperature-dependent d-spacing stretch
-dfactor = 0.05*mcipT/Tc + 1; // latices are scaled by 1% at Tc...
+dfactor = 0.02*mcipT/Tc + 1; // latices are scaled by 1% at Tc...
 
 
 
