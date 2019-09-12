@@ -17,7 +17,7 @@
 * %P
 * lmax: [ÅÅ]        source min
 * lmin: [ÅÅ]        source max
-* T: [K]            temperature (Tc is 500)
+* T: [K]            temperature (Tc is 525)
 * tau: [min]        reaction time (from 0 to 300 mins)
 * use_CoFe2O4 [1]   switches compound B on/off
 * use_CoFe [1]      switches compound A on/off
@@ -39,7 +39,7 @@ DECLARE
   double det_rad,det_Linst,det_t0,det_th1,det_th2;
   double hm = 2*PI*K2V; // h/m_n
   double samplechoice = 0;
-  double Tc = 500;
+  double Tc = 525;
   double lam0;
   double dlam;
   double dPulse;
