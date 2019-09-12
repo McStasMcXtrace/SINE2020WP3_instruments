@@ -17,15 +17,21 @@
 * %P
 * lmax: [ÅÅ]        source min
 * lmin: [ÅÅ]        source max
-* T: [K]            propability of hitting sample #1 (CoFe2O4)
-* tau: [min]        propability of hitting sample #2 (CoFe), accumulated with samplerate_1
-* use_CoFe2O4 [1]   switches compound B on/off
-* use_CoFe [1]      switches compound A on/off
-* use_magn [1]      switches magnetic peak on/off
+* T: [K]            temperature (Tc is 500)
+* tau: [min]        reaction time (from 0 to 300 mins)
+* use_CoFe2O4: [1]  switches compound B on/off for testing purposes
+* use_CoFe: [1]     switches compound A on/off
+* use_magn: [1]     switches magnetic peak on/off
+* f1: [1]           global intensity factor for sample#1
+* f2: [2]           global intensity factor for sample#2
+* f3: [3]           global intensity factor for sample#3
 *
 * %E
 *******************************************************************************/
-DEFINE INSTRUMENT ESS_HEIMDAL(lmax=4, lmin=0.5, T=400, tau=0, use_CoFe2O4=1, use_CoFe=1, use_magn=1)
+DEFINE INSTRUMENT ESS_HEIMDAL(
+  lmax=4, lmin=0.5, T=400, tau=0,
+  use_CoFe2O4=1, use_CoFe=1, use_magn=1,
+  f1=1, f2=1, f3=1)
 
 
 DECLARE
@@ -57,32 +63,32 @@ DECLARE
   //
   // determine Itime_CoFe2O4 and Itime_CoFe
   int piecewiselin(double x, double* val, struct pieceswisepars* fct, int sz) {
-  // NOTE: the user is responsible
-  double* u = fct->uppers;
-  double* s = fct->slopes;
-  double* c = fct->consts;
-  double min = fct->min;
+    // NOTE: the user is responsible
+    double* u = fct->uppers;
+    double* s = fct->slopes;
+    double* c = fct->consts;
+    double min = fct->min;
 
-  // use first found segment
-  int i = 0;
-  double low, high;
-  for (i=0;i<sz;i++) {
-    // determine segment lower limit
-    if (i==0) low = min;
-    else low = u[i-1];
+    // use first found segment
+    int i = 0;
+    double low, high;
+    for (i=0;i<sz;i++) {
+      // determine segment lower limit
+      if (i==0) low = min;
+      else low = u[i-1];
 
-    // determine segment upper limit
-    high = u[i];
-    if (low<=x && x<=high) {
-      fprintf(stdout, "\nl:%1f h:%1f s:%1f c:%1f x:%1f", low, high, s[i], c[i], x);
-      *val = s[i]*x + c[i];
-      return s[i]*x + c[i];
-      //return 0;
+      // determine segment upper limit
+      high = u[i];
+      if (low<=x && x<=high) {
+        fprintf(stdout, "\nl:%1f h:%1f s:%1f c:%1f x:%1f", low, high, s[i], c[i], x);
+        *val = s[i]*x + c[i];
+        return s[i]*x + c[i];
+        //return 0;
+      }
     }
+    return 1;
   }
-  return 1;
-}
-  
+
 %}
 
 
@@ -187,6 +193,7 @@ AT (0, 0, 150) RELATIVE source
 EXTEND %{
     // peak intensity depends on reaction time
     p *= Itime_CoFe;
+    p *= mcipf1;
 %}
 
 // CoFe2O4, compound B
@@ -202,6 +209,7 @@ AT (0, 0, 150) RELATIVE source
 EXTEND %{
     // peak intensity varies as a function of reaction time
     p *= Itime_CoFe2O4;
+    p *= mcipf2;
 %}
 
 // magnetic peak
@@ -218,7 +226,8 @@ AT (0, 0, 150) RELATIVE source
 EXTEND %{
     // peak intensity diminishes as a function of temperature
     if (mcipT<Tc && mcipT>=0) {
-      p *= (Tc-mcipT)/(mcipT);
+      p *= (Tc-mcipT)/(Tc);
+      p *= mcipf3;
     }
     else
         ABSORB;
