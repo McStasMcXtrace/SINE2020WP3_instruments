@@ -229,7 +229,7 @@ long   xs_compute, xs_reuse, xs_calls;
         d = Table_Index(sTable, i, info->column_order[1]-1);
 
         // modify dspace_factor here
-        printf("modifying d spacing: %g into %g\n", d, d*dspc_factor);
+        //printf("modifying d spacing: %g into %g\n", d, d*dspc_factor);
         d = d*dspc_factor;
 
       if (info->column_order[2] >0)
