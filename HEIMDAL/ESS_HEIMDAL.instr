@@ -128,7 +128,7 @@ piecewiselin(mciptau, &Itime_CoFe, &pars_CoFe, 2);
 
 double min2 = 0;
 double u2[1] = {300};
-double s2[1] = {-0.2/300};
+double s2[1] = {-0.4/300};
 double c2[1] = {0.4};
 pars_CoFe2O4.min = min2;
 pars_CoFe2O4.uppers = u2;
