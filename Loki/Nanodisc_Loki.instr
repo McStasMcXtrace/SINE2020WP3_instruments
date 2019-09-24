@@ -1,22 +1,20 @@
 /*******************************************************************************
+*         mcstas instrument definition url=http://www.mcstas.org
 *
-* McStas, neutron ray-tracing package
-*         Copyright (C) 1997-2008, All rights reserved
-*         Risoe National Laboratory, Roskilde, Denmark
-*         Institut Laue Langevin, Grenoble, France
-**
-* Instrument: Loki
+* instrument: Loki
 *
-* %Identification
-* Written by: Viktor Holm (vektor.holm@gmail.com)
-* Date: 2019-05
-* Origin: ESS
-* %INSTRUMENT_SITE: ESS
+* %identification
+* written by: andrew jackson (andrew.jackson@esss.se)
+* date: 2016-02-03 2017-07-17
+* origin: ess
+* release: mcstas 2.4
+* version: 2.0
+* %instrument_site: ess
 *
 * Loki
 *
-* %Description
-* Model of Loki using ESS moderator
+* %description
+* model of Loki using ESS moderator
 *
 * Notes:
 * - Testing new vertical bender component that works with gravity on
@@ -26,17 +24,18 @@
 * Example:
 *
 * %Parameters
-* SAMPLE: [1] Controls what kind of sample we are measuring by a integer input. 0 is the hydrogenated nanodisc. 1 is the deutorated nanodiscs on their own. 2 Both deutorated and hydrogenated nanodiscs in a 50 slash 50 mix before lipids exchange. 3 is the nanodisc after lipids have had time to exchange.
-* Solvent_Fraction: [fraction] The ratio between heavy and light water the solvent is composed of
-* Incoherent_Solvent: [1] Control if the sample is with the incoherent background from the solvent or without by a integer input. 0 with, 1 without, 2 incoherent on its own
-* Mix_Fraction: [fraction] Yet another fraction
-* Repeat_Number: [1] Control of simulation statistics, number of repetitions of the event-file input.
+* Instrument_Mode: [0] 0 is a virtual input with collimation length 10m and a wavelength band of 3AA - 10AA. 1 is an input using a collimation length of 10m and a wavelength band of 3AA to 18.4A
+* Detector_Distance: [m] Distance from the sample to the detector. There are 3 detector lengths available, 2m, 5m, and 10m.
+* SAMPLE: [0] controls what kind of sample we are measuring by a integer input. 0 is the hydrogenated nanodisc. 1 is the deutorated nanodiscs on their own. 2 Both deutorated and hydrogenated nanodiscs in a 50/50 mix before lipids exchange. 3 is the nanodisc after lipids have had time to exchange.
+* Solvent_Fraction: [0] The ratio between heavy and light water the solvent is composed of.
+* Mix_Fraction: [0] Controls the fraction of lipids that have exchanged in he sample, Mix_Fraction=0 is the T_0 in the experiment.
+* Incoherent_Solvent: [0] Control if the sample is with the incoherent background from the solvent or without by a integer input. 0 with, 1 without, 2 incoherent on its own.
 *
-* %Link
-*
-* %End
 *******************************************************************************/
-DEFINE INSTRUMENT Loki(int SAMPLE=0, Solvent_Fraction=1.0, Mix_Fraction=0.0, int Incoherent_Solvent=0, int Repeat_Number=50)
+
+
+DEFINE INSTRUMENT Loki(int Instrument_Mode = 0, double Detector_Distance = 2.0, int SAMPLE = 0, double Solvent_Fraction=1.0,
+	double Mix_Fraction=0.0, int Incoherent_Solvent = 0)
  
 DECLARE
 %{
@@ -49,6 +48,7 @@ double Mix_Chance;
 
   //Strings
   char virtualoutput_filename[256];
+  char calibration_filename[256];
   char mcploutput_filename[256];
   char Sample_String[256];
 
@@ -61,10 +61,10 @@ int SAMPLE_HOLD2;
 int SAMPLE_Select;
 int Repeat_Number;
 int Plot_Frac;
-double Detector_Distance;
 
 //int VI;
 int Beamstop;
+double Rmin;
 double T_min;
 double T_max;
 double P_Interact;
@@ -114,17 +114,82 @@ INITIALIZE
 %{
 
 //All of these could be input perameters
-//Repeat_Number=50;
-DetectorSize = 2;
+Repeat_Number=5;
+DetectorSize = 1.0;
 Beamstop = 0;
 P_Interact = 0.0;
 Sam = 999;
-Plot_Frac = 200;
-Detector_Distance=5.0;
+Rmin = sqrt(0.07*0.07+0.07*0.07);
   // Calculation of sample statistics:
 
+if(Instrument_Mode < 0){Instrument_Mode = 0;}
+if(Instrument_Mode > 5){Instrument_Mode = 0;}
+
+
+if(Detector_Distance == 2.0){
+    if(Instrument_Mode == 0){
+        sprintf(virtualoutput_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/inputs/C3_L115.dat");
+        sprintf(calibration_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/calibrations/cal0_2.dat");}
+    if(Instrument_Mode == 1){
+        sprintf(virtualoutput_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/inputs/C5_L115.dat");
+        sprintf(calibration_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/calibrations/cal1_2.dat");}
+    if(Instrument_Mode == 2){
+        sprintf(virtualoutput_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/inputs/C8_L115.dat");
+        sprintf(calibration_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/calibrations/cal2_2.dat");}
+    if(Instrument_Mode == 3){
+        sprintf(virtualoutput_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/inputs/C3_L214.dat");
+        sprintf(calibration_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/calibrations/cal3_2.dat");}
+    if(Instrument_Mode == 4){
+        sprintf(virtualoutput_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/inputs/C5_L214.dat");
+        sprintf(calibration_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/calibrations/cal4_2.dat");}
+    if(Instrument_Mode == 5){
+        sprintf(virtualoutput_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/inputs/C8_L214.dat");
+        sprintf(calibration_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/calibrations/cal5_2.dat");}
+}
+
+else if(Detector_Distance == 10.0){
+    if(Instrument_Mode == 0){
+        sprintf(virtualoutput_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/inputs/C3_L115.dat");
+        sprintf(calibration_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/calibrations/cal0_10.dat");}
+    if(Instrument_Mode == 1){
+        sprintf(virtualoutput_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/inputs/C5_L115.dat");
+        sprintf(calibration_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/calibrations/cal1_10.dat");}
+    if(Instrument_Mode == 2){
+        sprintf(virtualoutput_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/inputs/C8_L115.dat");
+        sprintf(calibration_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/calibrations/cal2_10.dat");}
+    if(Instrument_Mode == 3){
+        sprintf(virtualoutput_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/inputs/C3_L214.dat");
+        sprintf(calibration_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/calibrations/cal3_10.dat");}
+    if(Instrument_Mode == 4){
+        sprintf(virtualoutput_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/inputs/C5_L214.dat");
+        sprintf(calibration_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/calibrations/cal4_10.dat");}
+    if(Instrument_Mode == 5){
+        sprintf(virtualoutput_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/inputs/C8_L214.dat");
+        sprintf(calibration_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/calibrations/cal5_10.dat");}
+}
+else{
+    if(Instrument_Mode == 0){
+        sprintf(virtualoutput_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/inputs/C3_L115.dat");
+        sprintf(calibration_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/calibrations/cal0_5.dat");}
+    if(Instrument_Mode == 1){
+        sprintf(virtualoutput_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/inputs/C5_L115.dat");
+        sprintf(calibration_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/calibrations/cal1_5.dat");}
+    if(Instrument_Mode == 2){
+        sprintf(virtualoutput_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/inputs/C8_L115.dat");
+        sprintf(calibration_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/calibrations/cal2_5.dat");}
+    if(Instrument_Mode == 3){
+        sprintf(virtualoutput_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/inputs/C3_L214.dat");
+        sprintf(calibration_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/calibrations/cal3_5.dat");}
+    if(Instrument_Mode == 4){
+        sprintf(virtualoutput_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/inputs/C5_L214.dat");
+        sprintf(calibration_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/calibrations/cal4_5.dat");}
+    if(Instrument_Mode == 5){
+        sprintf(virtualoutput_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/inputs/C8_L214.dat");
+        sprintf(calibration_filename,"/home/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Nanodisc_Science_case_simulation_for_upload/calibrations/cal5_5.dat");}
+}
+
 T_min=22000.0;
-T_max=130000.0;
+T_max=170000.0;
 DetectorRadius = sqrt((DetectorSize*DetectorSize) + (DetectorSize*DetectorSize));
 
 
@@ -188,7 +253,7 @@ COMPONENT Origin = Progress_bar()
   AT (0,0,0) ABSOLUTE
 
 COMPONENT virtual_input = Virtual_input(
-    filename="loki_vsource-collen_10.0m-ap1_15mm-ap2_5mm-lmin_3.0A-lmax_18.0A.list", 
+    filename=virtualoutput_filename, 
     verbose=1, 
     repeat_count=Repeat_Number, 
     smooth=1, 
@@ -197,7 +262,7 @@ COMPONENT virtual_input = Virtual_input(
 AT (0,0,0) RELATIVE Origin
 EXTEND
 %{
-if(SAMPLE_HOLD2 == 3){
+if(SAMPLE_HOLD2 == 2){
 
 SAMPLE_Select = rand() % 2;
 SAMPLE_HOLD = SAMPLE_Select;
@@ -209,12 +274,12 @@ SAMPLE_HOLD = SAMPLE_Select;
 
 
 COMPONENT l_monitor_before_sample = L_monitor(
-    nL=1000,
+    nL=100,
     filename="Lambda_before_sample", 
     xwidth=DetectorRadius, 
     yheight=DetectorRadius, 
-    Lmin=3.0, 
-    Lmax=18.0, 
+    Lmin=0.0, 
+    Lmax=23.0, 
     restore_neutron=1)
 AT (0, 0, 0.004) RELATIVE virtual_input
 
@@ -280,36 +345,6 @@ COMPONENT Deutorated_Disc = SANSNanodiscsFast_Loki(
     beamwidth_y = 0.01)
 WHEN(SAMPLE_HOLD==1)  AT (0, 0, 0.005) RELATIVE virtual_input
 
-COMPONENT Mixed_Disc = SANSNanodiscsFast_Loki(
-    AxisRatio=AxisRatio,
-    NumberOfLipids=N_Lipids, 
-    AreaPerLipidHeadgroup=AreaPrHead, 
-    HeightOfMSP=H_1MSP, 
-    VolumeOfOneMSP=V_1MSP,  
-    VolumeOfHeadgroup=V_1Headgruope, 
-    VolumeOfCH2Tail=V_1CH2Tail,  
-    VolumeOfCH3Tail=V_1CH3Tail, 
-    ScatteringLengthOfOneMSP=SLD_1MSP,  
-    ScatteringLengthOfHeadgroup=sigma_Head_Mixed, 
-    ScatteringLengthOfCH2Tail=sigma_CH2_Mixed, 
-    ScatteringLengthOfCH3Tail=sigma_CH3_Mixed, 
-    Roughness=Rough, 
-    Concentration=Conc, 
-    RhoSolvent=RhoSolv, 
-    RhoSolventIncoherent=RhoSolv_Inc,  
-    AbsorptionCrosssection=AbsCrossection,
-    AbsorptionCrosssectionSolvent=sigma_abs_solvent,
-    xwidth=0.1, 
-    yheight=0.1, 
-    zdepth=0.005, 
-    SampleToDetectorDistance=Detector_Distance, 
-    DetectorRadius=DetectorRadius,
-    qMax = 10.0,
-    qMin = 0.0,
-    beamwidth_x = 0.01,
-    beamwidth_y = 0.01)
-WHEN(SAMPLE_HOLD==2)  AT (0, 0, 0.005) RELATIVE virtual_input
-
 /// Detectors //////////////////////////////////////////////////////////////////
 
 COMPONENT beamstop = Beamstop(
@@ -317,20 +352,20 @@ COMPONENT beamstop = Beamstop(
     yheight=0.012)
 WHEN (Beamstop==1) AT (0,0,1) RELATIVE virtual_input
 
-COMPONENT tof_sans_monitor = TOF_SANS_monitor(
-    nr=1250, 
+COMPONENT tof_sans_monitor = TOF_SANS_spacial_monitor(
+    nr=200, 
     nt=1000,
     nq=500,
-    PlotFraction = Plot_Frac,
     filename="TOF_SANS",
     qFilename = "QDetector",
-    rmax=DetectorRadius, 
+    rmin=Rmin,
+    rmax=DetectorRadius,
+    calibration_file=calibration_filename,
     tmin=T_min, 
     tmax=T_max,
     SDD=Detector_Distance+0.005,
     restore_neutron=1,
-    instrumentlength = Detector_Distance+0.005+23.5,
-    Show = 1)
+    instrumentlength = Detector_Distance+0.005+23.5)
 AT (0, 0, Detector_Distance+0.005) RELATIVE virtual_input
 
 ////////////////////////////////////////////////////////////////////////////////
