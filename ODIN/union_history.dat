@@ -1,0 +1,83 @@
+History file written by the McStas component Union_master 
+When running with MPI, the results may be from just a single thread, meaning intensities are divided by number of threads
+----- Description of the used volumes -----------------------------------------------------------------------------------
+V0: Surrounding vacuum 
+V1: blade_rust_side_1  Material: FeOOH   P0:  P1: $
+V2: blade_rust_side_2  Material: FeOOH   P0:  P1: $
+V3: blade_rust_side_3  Material: FeOOH   P0:  P1: $
+V4: blade_iron_side_1  Material: iron_mix   P0: ¸ÿ-Ü P1: mix_cementite_incoherent P2: mix_Fe_alpha_powder P3: mix_cementite_powder
+V5: blade_mask_1  Material: Mask  
+V6: blade_mask_2  Material: Mask  
+V7: blade_mask_25  Material: Mask  
+V8: blade_rust_iron_core_side_1  Material: iron_mix   P0: ¸ÿ-Ü P1: mix_cementite_incoherent P2: mix_Fe_alpha_powder P3: mix_cementite_powder
+V9: rust_mask_1  Material: Mask  
+V10: rust_mask_2  Material: Mask  
+V11: blade_iron_side_2  Material: iron_mix   P0: ¸ÿ-Ü P1: mix_cementite_incoherent P2: mix_Fe_alpha_powder P3: mix_cementite_powder
+V12: blade_mask_3  Material: Mask  
+V13: blade_mask_4  Material: Mask  
+V14: rust_core  Material: Fe2O3   P0: Fe2O3_incoherent P1: Fe2O3_powder
+V15: hard_core  Material: iron_mix   P0: ¸ÿ-Ü P1: mix_cementite_incoherent P2: mix_Fe_alpha_powder P3: mix_cementite_powder
+V16: side_cut_1  Material: Vacuum  
+V17: side_cut_2  Material: Vacuum  
+V18: blade_iron_side_tip_1  Material: iron_mix   P0: ¸ÿ-Ü P1: mix_cementite_incoherent P2: mix_Fe_alpha_powder P3: mix_cementite_powder
+V19: blade_mask_tip_1  Material: Mask  
+V20: blade_mask_tip_2  Material: Mask  
+V21: blade_rust_side_tip_2  Material: Fe2O3   P0: Fe2O3_incoherent P1: Fe2O3_powder
+V22: blade_rust_side_tip_3  Material: Fe2O3   P0: Fe2O3_incoherent P1: Fe2O3_powder
+V23: blade_rust_side_tip_4  Material: Fe2O3   P0: Fe2O3_incoherent P1: Fe2O3_powder
+V24: blade_iron_side_tip_2  Material: iron_mix   P0: ¸ÿ-Ü P1: mix_cementite_incoherent P2: mix_Fe_alpha_powder P3: mix_cementite_powder
+V25: blade_mask_tip_3  Material: Mask  
+V26: blade_mask_tip_4  Material: Mask  
+V27: blade_side_iron_core_tip_2  Material: iron_mix   P0: ¸ÿ-Ü P1: mix_cementite_incoherent P2: mix_Fe_alpha_powder P3: mix_cementite_powder
+V28: blade_mask_tip_5  Material: Mask  
+V29: blade_mask_tip_6  Material: Mask  
+V30: rust_core_tip  Material: Fe2O3   P0: Fe2O3_incoherent P1: Fe2O3_powder
+V31: hard_core_tip  Material: iron_mix   P0: ¸ÿ-Ü P1: mix_cementite_incoherent P2: mix_Fe_alpha_powder P3: mix_cementite_powder
+V32: left_blade_guard  Material: iron_mix   P0: ¸ÿ-Ü P1: mix_cementite_incoherent P2: mix_Fe_alpha_powder P3: mix_cementite_powder
+V33: right_blade_guard  Material: iron_mix   P0: ¸ÿ-Ü P1: mix_cementite_incoherent P2: mix_Fe_alpha_powder P3: mix_cementite_powder
+V34: handle  Material: iron_mix   P0: ¸ÿ-Ü P1: mix_cementite_incoherent P2: mix_Fe_alpha_powder P3: mix_cementite_powder
+V35: handle_end  Material: iron_mix   P0: ¸ÿ-Ü P1: mix_cementite_incoherent P2: mix_Fe_alpha_powder P3: mix_cementite_powder
+V36: sample_mount  Material: Al   P0: °…ý²U P1: LÿýÝ9ä¤@
+V37: Holder_1  Material: Al   P0: °…ý²U P1: LÿýÝ9ä¤@
+V38: sample_holder_1_mask_1  Material: Mask  
+V39: sample_holder_1_mask_2  Material: Mask  
+V40: sample_holder_1_mask_3  Material: Mask  
+V41: sample_holder_1_mask_4  Material: Mask  
+V42: Holder_2  Material: Al   P0: °…ý²U P1: LÿýÝ9ä¤@
+V43: sample_holder_2_mask_1  Material: Mask  
+V44: sample_holder_2_mask_2  Material: Mask  
+V45: sample_holder_2_mask_3  Material: Mask  
+V46: sample_holder_2_mask_4  Material: Mask  
+V47: Holder_3  Material: Al   P0: °…ý²U P1: LÿýÝ9ä¤@
+V48: sample_holder_3_mask_1  Material: Mask  
+V49: sample_holder_3_mask_2  Material: Mask  
+V50: sample_holder_3_mask_3  Material: Mask  
+V51: sample_holder_3_mask_4  Material: Mask  
+V52: detector_exit  Material: Exit  
+----- Histories sorted after intensity ----------------------------------------------------------------------------------
+42	 N I=1.587504E+09 	 V0 -> V17 -> V0 -> V16 -> V0 -> V52 
+28	 N I=7.264455E+08 	 V0 -> V52 
+3	 N I=1.366797E+08 	 V0 -> V17 -> V0 -> V11 -> V0 -> V16 -> V0 -> V52 
+1	 N I=1.069247E+08 	 V0 -> V17 -> V15 -> P2 -> P2 -> V17 -> V37 -> V17 -> V0 
+1	 N I=6.812371E+07 	 V0 -> V17 -> V36 -> V17 -> V15 -> P2 -> V17 -> V36 -> V17 -> V0 
+1	 N I=5.903093E+07 	 V0 -> V17 -> V0 -> V4 -> V8 -> P2 -> P2 -> V1 -> V0 
+2	 N I=3.708997E+07 	 V0 -> V17 -> V15 -> V16 -> V0 -> V52 
+3	 N I=3.116692E+07 	 V0 -> V17 -> V36 -> V17 -> V15 -> V16 -> V0 -> V52 
+1	 N I=1.852262E+07 	 V0 -> V17 -> V0 -> V1 -> V0 -> V16 -> V0 -> V52 
+1	 N I=6.915932E+06 	 V0 -> V17 -> V36 -> V17 -> V15 -> P2 -> P2 -> V17 -> V36 -> V17 -> V0 
+2	 N I=4.520904E+06 	 V0 -> V17 -> V36 -> V17 -> V0 -> V11 -> V0 -> V16 -> V0 -> V52 
+1	 N I=1.925861E+06 	 V0 -> V17 -> V36 -> V17 -> V0 -> V11 -> P1 -> V0 -> V16 -> V0 -> V52 
+1	 N I=1.782647E+06 	 V0 -> V17 -> V0 -> V52 
+1	 N I=1.781455E+06 	 V0 -> V17 -> V36 -> V17 -> V15 -> P0 -> V16 -> V0 -> V52 
+1	 N I=7.314949E+05 	 V0 -> V17 -> V36 -> V17 -> V15 -> P0 -> V17 -> V36 -> V17 -> V0 
+1	 N I=3.505689E+05 	 V0 -> V17 -> V36 -> V37 -> V17 -> V0 -> V11 -> P0 -> V14 -> V11 -> V16 -> V37 -> V16 -> V0 -> V52 
+1	 N I=1.226797E+05 	 V0 -> V17 -> V36 -> V17 -> V14 -> V15 -> V14 -> P0 -> V15 -> V17 -> V36 -> V17 -> V0 
+1	 N I=2.674113E+03 	 V0 -> V17 -> V36 -> P0 -> V17 -> V0 
+1	 N I=6.241458E+02 	 V0 -> V17 -> V36 -> V17 -> V0 -> V11 -> P0 -> P1 -> V0 -> V36 -> V0 -> V17 -> V0 
+1	 N I=2.757469E+02 	 V0 -> V17 -> V36 -> V17 -> V15 -> P0 -> P1 -> V17 -> V36 -> V17 -> V0 
+1	 N I=3.363687E+01 	 V0 -> V17 -> V36 -> V17 -> V0 -> V11 -> P0 -> P0 -> P0 -> V0 -> V17 -> V36 -> V17 -> V0 
+1	 N I=2.190785E+01 	 V0 -> V17 -> V36 -> V37 -> V17 -> V14 -> V15 -> P0 -> P0 -> V14 -> V11 -> P0 -> V14 -> V11 -> V0 -> V37 -> V36 -> V17 -> V0 
+1	 N I=1.271780E+00 	 V0 -> V17 -> V36 -> V17 -> V15 -> P0 -> V17 -> V36 -> P1 -> V17 -> V15 -> P0 -> P3 -> V17 -> V36 -> V17 -> V0 
+1	 N I=0.000000E+00 	 V0 -> V17 -> V0 -> V4 -> V8 -> V4 -> V0 -> V16 -> V0 -> V52 
+1	 N I=0.000000E+00 	 V0 -> V17 -> V37 -> V0 -> V3 -> V8 -> V3 -> V0 -> V37 -> V16 -> V0 -> V52 
+1	 N I=0.000000E+00 	 V0 -> V17 -> V36 -> V37 -> V17 -> V15 -> V16 -> V37 -> V16 -> V0 -> V52 

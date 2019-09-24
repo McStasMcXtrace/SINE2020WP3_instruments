@@ -1,0 +1,74 @@
+/*******************************************************************************
+*
+* McStas, neutron ray-tracing package
+*         Copyright 1997-2002, All rights reserved
+*         Risoe National Laboratory, Roskilde, Denmark
+*         Institut Laue Langevin, Grenoble, France
+*
+* Component: Wavelength_Diffuser
+*
+* %I
+* Written by: Viktor L. Holm
+* Date: Aug 13, 2019
+* Origin: Risoe
+*
+* %D
+* A Component that introduces an artificial psudo normal distributed uncurtanty in wavelength from 0 to +/- dlambda.
+* detector.
+*
+* Example: Wavelength_Diffuser(dlambda = 1)
+*
+* %P
+* INPUT PARAMETERS:
+*
+* dlambda: [AA]      Maximum posiple wavelength change
+*
+* OUTPUT PARAMETERS:
+*
+* %E
+*******************************************************************************/
+
+
+DEFINE COMPONENT Wavelength_Diffuser
+DEFINITION PARAMETERS ()
+SETTING PARAMETERS (dlambda = 1)
+/* Neutron parameters: (x,y,z,vx,vy,vz,t,sx,sy,sz,p) */
+
+DECLARE
+%{
+
+  double Rand,Random,l_save;
+  int k;
+
+
+%}
+INITIALIZE
+  %{
+
+
+
+
+  %}
+TRACE
+  %{
+
+      Rand = 0;
+      for(k=0;k<12;k++){
+      Random = rand();
+      Rand += Random / RAND_MAX;}
+        Rand -= 6;
+
+
+      l_save = (2*PI/V2K)/sqrt(vx*vx + vy*vy + vz*vz);
+
+      Rand = (2*PI/V2K) / ( (Rand * dlambda * l_save + l_save) * sqrt(vx*vx + vy*vy + vz*vz));
+
+      vx *= Rand;
+      vy *= Rand;
+      vz *= Rand;
+
+  %}
+
+
+
+END
