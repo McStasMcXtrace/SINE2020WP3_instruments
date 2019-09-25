@@ -21,12 +21,12 @@
 * Example:
 *
 * %Parameters
-* Instrument_Mode: [0] 0 is a virtual input with collimation length 10m and a wavelength band of 3AA - 10AA. 1 is an input using a collimation length of 10m and a wavelength band of 3AA to 18.4A
-* Detector_Distance: [m] Distance from the sample to the detector. There are 3 detector lengths available, 2m, 5m, and 10m.
-* SAMPLE: [0] controls what kind of sample we are measuring by a integer input. 0 is the hydrogenated nanodisc. 1 is the deutorated nanodiscs on their own. 2 Both deutorated and hydrogenated nanodiscs in a 50/50 mix before lipids exchange. 3 is the nanodisc after lipids have had time to exchange.
-* Solvent_Fraction: [0] The ratio between heavy and light water the solvent is composed of.
-* Mix_Fraction: [0] Controls the fraction of lipids that have exchanged in he sample, Mix_Fraction=0 is the T_0 in the experiment.
-* Incoherent_Solvent: [0] Control if the sample is with the incoherent background from the solvent or without by a integer input. 0 with, 1 without, 2 incoherent on its own.
+* Instrument_Mode:    [1] 0 is a virtual input with collimation length 10m and a wavelength band of 3AA - 10AA. 1 is an input using a collimation length of 10m and a wavelength band of 3AA to 18.4A
+* Detector_Distance:  [m] Distance from the sample to the detector. There are 3 detector lengths available, 2m, 5m, and 10m.
+* SAMPLE:             [1] controls what kind of sample we are measuring by a integer input. 0 is the hydrogenated nanodisc. 1 is the deutorated nanodiscs on their own. 2 Both deutorated and hydrogenated nanodiscs in a 50/50 mix before lipids exchange. 3 is the nanodisc after lipids have had time to exchange.
+* Solvent_Fraction:   [1] The ratio between heavy and light water the solvent is composed of.
+* Mix_Fraction:       [1] Controls the fraction of lipids that have exchanged in he sample, Mix_Fraction=0 is the T_0 in the experiment.
+* Incoherent_Solvent: [1] Control if the sample is with the incoherent background from the solvent or without by a integer input. 0 with, 1 without, 2 incoherent on its own.
 *
 *******************************************************************************/
 
