@@ -1,0 +1,134 @@
+/*******************************************************************************
+*
+* McStas, neutron ray-tracing package
+*         Copyright 1997-2002, All rights reserved
+*         Risoe National Laboratory, Roskilde, Denmark
+*         Institut Laue Langevin, Grenoble, France
+*
+* Component: bril_mon
+*
+* %I
+* Written by: Kristian Nielsen and Kim Lefmann
+* Date: April 20, 1998
+* Version: $Revision: 4382 $
+* Origin: Risoe
+* Release: McStas 1.6
+*
+* Wavelength-sensitive monitor.
+*
+* %D
+* A square single monitor that measures the wavelength of the incoming
+* neutrons.
+*
+* Example: bril_mon(xmin=-0.1, xmax=0.1, ymin=-0.1, ymax=0.1,
+*           nBril=20, filename="Output.L", Lmin=2, Lmax=10)
+*
+* %P
+* INPUT PARAMETERS:
+*
+* xmin:     Lower x bound of detector opening (m)
+* xmax:     Upper x bound of detector opening (m)
+* ymin:     Lower y bound of detector opening (m)
+* ymax:     Upper y bound of detector opening (m)
+* xwidth:   Width of detector. Overrides xmin,xmax. (m)
+* yheight:  Height of detector. Overrides ymin,ymax. (m)
+* Lmin:     Minimum wavelength to detect (AA)
+* Lmax:     Maximum wavelength to detect (AA)
+* nBril:       Number of channels (1)
+* nx:       (1)
+* ny:       Vector definition of "forward" direction wrt. divergence, to be used e.g. when the monitor is rotated into the horizontal plane.(1)
+* nz:       (1)
+* filename: Name of file in which to store the detector image (text)
+* restore_neutron: If set, the monitor does not influence the neutron state (1)
+*
+* OUTPUT PARAMETERS:
+*
+* Bril_N:      Array of neutron counts
+* Bril_p:      Array of neutron weight counts
+* Bril_p2:     Array of second moments
+*
+* %E
+*******************************************************************************/
+
+DEFINE COMPONENT bril_mon
+DEFINITION PARAMETERS (nBril=20)
+SETTING PARAMETERS (string filename=0, xmin=-0.05, xmax=0.05, ymin=-0.05, ymax=0.05, 
+  xwidth=0, yheight=0, Lmin, Lmax, restore_neutron=0, nx=0, ny=0, nz=1)
+OUTPUT PARAMETERS (Bril_N, Bril_p, Bril_p2)
+/* Neutron parameters: (x,y,z,vx,vy,vz,t,sx,sy,sz,p) */ 
+DECLARE
+  %{
+    double Bril_N[nBril];
+    double Bril_p[nBril], Bril_p2[nBril];
+  %}
+INITIALIZE
+  %{
+    int i;
+
+    if (xwidth  > 0) { xmax = xwidth/2;  xmin = -xmax; }
+    if (yheight > 0) { ymax = yheight/2; ymin = -ymax; }
+
+    if ((xmin >= xmax) || (ymin >= ymax)) {
+            printf("L_monitor: %s: Null detection area !\n"
+                   "ERROR      (xwidth,yheight,xmin,xmax,ymin,ymax). Exiting",
+           NAME_CURRENT_COMP);
+      exit(0);
+    }
+
+    for (i=0; i<nBril; i++)
+    {
+      Bril_N[i] = 0;
+      Bril_p[i] = 0;
+      Bril_p2[i] = 0;
+    }
+    NORM(nx,ny,nz);
+
+  %}
+TRACE
+  %{
+    int i;
+    double L,v,vn,h_div,v_div,div;
+
+    PROP_Z0;
+    if (x>xmin && x<xmax && y>ymin && y<ymax)
+    {
+      vn = scalar_prod(vx, vy, vz, nx, ny, nz);
+      h_div = RAD2DEG*atan2(vx,vn);
+      v_div = RAD2DEG*atan2(vy,vn);
+      div=sqrt(h_div*h_div+v_div*v_div);
+      L = (2*PI/V2K)/sqrt(vx*vx + vy*vy + vz*vz);
+      i = floor((L-Lmin)*nBril/(Lmax-Lmin));
+      if(i >= 0 && i < nBril)
+      {
+        Bril_N[i]++;
+        Bril_p[i] += p/(L*div);
+        Bril_p2[i] += (p/(L*div))*(p/(L*div));
+        SCATTER;
+      }
+    } 
+    if (restore_neutron) {
+      RESTORE_NEUTRON(INDEX_CURRENT_COMP, x, y, z, vx, vy, vz, t, sx, sy, sz, p);
+    }
+  %}
+SAVE
+  %{
+    DETECTOR_OUT_1D(
+        "Brilliance monitor",
+        "Wavelength [AA]",
+        "Brilliance",
+        "B", Lmin, Lmax, nBril,
+        &Bril_N[0],&Bril_p[0],&Bril_p2[0],
+        filename);
+  %}
+
+MCDISPLAY
+%{
+  magnify("xy");
+  multiline(5, (double)xmin, (double)ymin, 0.0,
+               (double)xmax, (double)ymin, 0.0,
+               (double)xmax, (double)ymax, 0.0,
+               (double)xmin, (double)ymax, 0.0,
+               (double)xmin, (double)ymin, 0.0);
+%}
+
+END

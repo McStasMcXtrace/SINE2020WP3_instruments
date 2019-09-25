@@ -1,0 +1,3645 @@
+ /******************************************************************************************************
+*
+* %Description
+* 	McStas instrument for simulating a TOF imaging beamline at the ESS
+*   whole instrument shifted +0.5m, updated chopper radii, T0 gap,
+*   BPs now at FOC1 and FOC2, chopper_mode>=5 -> largest window in beam
+*   upgraded to McStas version 2.2a
+*
+*
+* %Identification (TUM part)
+* 	Written by: M. Seifert, P. Schmakat
+* 	Created: July 30, 2011
+* 	Source: FRM II
+* 	Release: McStas 2.2a
+* 	Version: 1.0
+* %Idenfication (PSI part)
+*       Written by: Manuel Morgano (manuel.morgano@psi.ch)
+*       Date: 06-3-2017
+*       Origin: PSI
+*       Release: McStas
+*       Version: 5.3
+** %Idenfication (merge)
+*       Written by: Michael Lerche (michael.lerche@frm2.tum.de)
+*       Date: 24-10-2017
+*       Origin: PSI
+*       Release: McStas
+*       Version: 5.3
+*
+*		Last Update: October 24, 2017
+*
+* %End
+******************************************************************************************************/
+
+// purpose of this version:
+//   new chopper positions
+//DEFINE INSTRUMENT ODIN(T0_thickness=0.3, foc_thickness=0.05) PSI
+
+DEFINE INSTRUMENT ODIN(
+    T0_thickness=0.2, 
+    foc_thickness=0.005,
+    l_min=1.0, 
+    l_max=11.0,
+    int num_pulses=1,
+    int chopper_mode=0,
+    int active_t0=1,        // guides_only just for the t0, 1 means active, 0 means no t0
+    int wfmc1_fail=0,       // 0 = operating, 1 = fail
+    int wfmc2_fail=0,
+    int bp1_fail=0,
+    int bp_fail=0,
+    int foc_fail=0,         // 0 = operating, n = FOCn fails
+	//rot_wfmc1 = 1,          // values: +-1, changes direction of rotation
+	//rot_wfmc2 = 1,
+	//z_wfmc = 7.00, 
+    delta_wfmc = 0.45,  // down from 0.5 lowest resolution now 0.84 instead of 0.93
+    //fo1_cut = 1.0,
+    //fo2_cut = 1.0,
+    fo3_cut = 1.0,
+    //fo4_cut = 1.0,
+    fo5_cut = 1.0,
+    //foc1_pos = 8.63,
+    bp1_cut = 0.5,           // cuts symmetrically, only affects correction term
+    bp1_phase_shift = 1.0,   // 1.0 means no shift, 0.0 means shift to end of previous frame
+    bp_cut = 0.5,           // cuts symmetrically, only affects correction term
+    bp_phase_shift = 1.0,   // 1.0 means no shift, 0.0 means shift to end of previous frame
+    //bp_term = 1.0,
+    // radius_bp = 0.6,
+    int bp_only=0, 
+    int print_debug_msg=2 //options are 0=no msg, 1=all msg, 2=chopper msg only, 3=guide msg only //wfm1_f_left = 0.935
+		       )
+
+/*
+-- chopper_mode usage --
+
+    0 = high resolution, 6 frames
+    1 = high resolution, 3 frames, frame 1-3
+    2 = high resolution, 3 frames, frame 2-4
+    3 = high resolution, 3 frames, frame 3-5
+    4 = high resolution, 3 frames, frame 4-6
+    5 =  low resolution, 6 frames
+    6 =  low resolution, 3 frames, frame 1-3
+    7 =  low resolution, 3 frames, frame 2-4
+    8 =  low resolution, 3 frames, frame 3-5
+    9 =  low resolution, 3 frames, frame 4-6
+    
+    high resolution: normal/wfm mode
+    low  resolution: all choppers (except BP) open, 'chopper zero mode'
+
+Do not forget to set num_pulses to the required value!
+*/
+
+
+
+DECLARE
+%{
+    #include <sys/time.h>
+    #define nchanTOF 1024
+    #define nchanTL 3840 // 3072
+    
+	// optional instrument parameters
+	//double fo1_cut, fo2_cut, fo3_cut, fo4_cut, fo5_cut;
+	double bp_phase_shift, bp_term, bp1_term; //bp_cut, 
+	double wfm1_f_left, theta_f_cut;
+
+	// general
+	int frame_passed, false_frame, pass_chopper, no_choppers, n_count, n_pulse, active_t0_copy;
+	int fo_false, t_scale;
+	double freq_source, alpha, pulse_length, t_0, t_2;
+	double lambda_min, lambda_1, lambda_2, lambda_3, lambda_4, lambda_5, lambda_6, lambda_7;
+	double time_det_a1, time_det_a2, time_det_b1, time_det_b2, time_det_c1, time_det_c2, time_det_d1, time_det_d2, time_det_e1, time_det_e2, time_det_f1, time_det_f2;
+	double time_TLa0, time_TLa1, time_TLb0, time_TLb1, time_TLc0, time_TLc1, time_TLd0, time_TLd1, time_TLe0, time_TLe1, time_TLf0, time_TLf1;
+	double guide_thickness;
+	
+	// choppers
+	double rot_wfmc1, rot_wfmc2;
+	double window_height_wfmc, window_height_foc1, window_height_foc2, window_height_foc3, window_height_foc4, window_height_foc5, window_height_bp, window_height_t0, window_height_bp1;
+	double radius_bp, radius_wfmc, radius_foc1, radius_foc2, radius_foc3, radius_foc4, radius_foc5, radius_t0, radius_bp1;
+	double freq_wfmc, freq_fo_1, freq_fo_2, freq_fo_3, freq_fo_4, freq_fo_5, freq_bp, freq_t0, freq_bp1;
+	double actual_wfmc_1, actual_wfmc_2, actual_fo_1, actual_fo_2, actual_fo_3, actual_fo_4, actual_fo_5, actual_bp, actual_t0, actual_bp1;
+
+	// wfmc
+	double z_wfmc, z_wfmc_1, z_wfmc_2, z_wfmc_1_real, z_wfmc_2_real;
+	double delta_t_a, delta_t_b, delta_t_c, delta_t_d, delta_t_e, delta_t_f, delta_t_f_cut;
+	double theta_a, theta_b, theta_c, theta_d, theta_e, theta_f;
+	double phi_1a, phi_1b, phi_1c, phi_1d, phi_1e, phi_1f, phi_1_rotate;
+	double phi_2a, phi_2b, phi_2c, phi_2d, phi_2e, phi_2f, phi_2_rotate;
+	double phi_1f_cut;
+
+	// fo
+	double fo1_a, fo1_b, fo1_c, fo1_d, fo1_e, fo1_f;
+	double fo2_a, fo2_b, fo2_c, fo2_d, fo2_e, fo2_f;
+	double fo3_a, fo3_b, fo3_c, fo3_d, fo3_e, fo3_f;
+	double fo4_a, fo4_b, fo4_c, fo4_d, fo4_e, fo4_f;
+	double fo5_a, fo5_b, fo5_c, fo5_d, fo5_e, fo5_f;
+
+	double foc1_pos,foc2_pos,foc3_pos,foc4_pos,foc5_pos,foc_housing;
+
+	double phi_fo_1a, phi_fo_1b, phi_fo_1c, phi_fo_1d, phi_fo_1e, phi_fo_1f, phi_foc1_rotate;
+	double phi_fo_2a, phi_fo_2b, phi_fo_2c, phi_fo_2d, phi_fo_2e, phi_fo_2f, phi_foc2_rotate;
+	double phi_fo_3a, phi_fo_3b, phi_fo_3c, phi_fo_3d, phi_fo_3e, phi_fo_3f, phi_foc3_rotate;
+	double phi_fo_4a, phi_fo_4b, phi_fo_4c, phi_fo_4d, phi_fo_4e, phi_fo_4f, phi_foc4_rotate;
+	double phi_fo_5a, phi_fo_5b, phi_fo_5c, phi_fo_5d, phi_fo_5e, phi_fo_5f, phi_foc5_rotate;
+
+	double theta_fo_1a, theta_fo_1b, theta_fo_1c, theta_fo_1d, theta_fo_1e, theta_fo_1f;
+	double theta_fo_2a, theta_fo_2b, theta_fo_2c, theta_fo_2d, theta_fo_2e, theta_fo_2f;
+	double theta_fo_3a, theta_fo_3b, theta_fo_3c, theta_fo_3d, theta_fo_3e, theta_fo_3f;
+	double theta_fo_4a, theta_fo_4b, theta_fo_4c, theta_fo_4d, theta_fo_4e, theta_fo_4f;
+	double theta_fo_5a, theta_fo_5b, theta_fo_5c, theta_fo_5d, theta_fo_5e, theta_fo_5f;
+
+	double theta_fo_1a_cut, theta_fo_1b_cut, theta_fo_1c_cut, theta_fo_1d_cut, theta_fo_1e_cut, theta_fo_1f_cut;
+	double theta_fo_2a_cut, theta_fo_2b_cut, theta_fo_2c_cut, theta_fo_2d_cut, theta_fo_2e_cut, theta_fo_2f_cut;
+	double theta_fo_3a_cut, theta_fo_3b_cut, theta_fo_3c_cut, theta_fo_3d_cut, theta_fo_3e_cut, theta_fo_3f_cut;
+	double theta_fo_4a_cut, theta_fo_4b_cut, theta_fo_4c_cut, theta_fo_4d_cut, theta_fo_4e_cut, theta_fo_4f_cut;
+	double theta_fo_5a_cut, theta_fo_5b_cut, theta_fo_5c_cut, theta_fo_5d_cut, theta_fo_5e_cut, theta_fo_5f_cut;
+	
+	// bp bp1
+	double bp_pos, phi_bp, theta_bp, bp_correction, phi_bp_shift, bp_housing; //housing size for both BPcs
+	double bp1_pos, phi_bp1, theta_bp1, bp1_correction, phi_bp1_shift;
+    
+	// T0
+	double T0_pos, t0_length, phi_t0, gt0_size_h, gt0_size_v, width_t0, height_t0, theta_p, theta_g, theta_t0, theta_t0_really, T0_housing;
+	
+	// guides old form TUM file
+
+	//guides new from PSI, check chopper related variables
+
+	double bi_focus_in_x, bi_focus_out_x, bi_focus_in_y, bi_focus_out_y;
+	double compression_focus_in_x, compression_focus_out_x, compression_focus_in_y, compression_focus_out_y;
+	double expansion_focus_in_x, expansion_focus_out_x, expansion_focus_in_y, expansion_focus_out_y;
+	double wfmc1_pos, wfmc2_pos;
+
+	 double g1a_start, g1b_start, g1c_start, g2a_start, g2b_start, gt0_start, g2c_start, g2d_start, g3a_start, g3b_start, g4a_start, g4b_start, g5a_start, g5b_start, g6_start;
+	 double g1a_end, g1b_end, g1c_end, g2a_end, g2b_end, gt0_end, g2c_end, g2d_end, g3a_end, g3b_end, g4a_end, g4b_end, g5a_end, g5b_end, g6_end;
+	double g1a_length, g1b_length, g1c_length, g2a_length, g2b_length, g2c_length, g2d_length, g3a_length, g3b_length, g4a_length, g4b_length, g5a_length, g5b_length, g6_length;
+
+	double g1a_open_x, g1b_open_x, g1c_open_x, g2a_open_x, g2b_open_x, g2c_open_x, g2d_open_x, g3a_open_x, g3b_open_x, g4a_open_x, g4b_open_x, g5a_open_x, g5b_open_x, g6_open_x; 
+	double g1a_open_y, g1b_open_y, g1c_open_y, g2a_open_y, g2b_open_y, g2c_open_y, g2d_open_y, g3a_open_y, g3b_open_y, g4a_open_y, g4b_open_y, g5a_open_y, g5b_open_y, g6_open_y; 
+
+	 double g1a_focus_in_x, g1b_focus_in_x, g1c_focus_in_x, g2a_focus_in_x, g2b_focus_in_x, gt0_focus_in_x, g2c_focus_in_x, g2d_focus_in_x, g3a_focus_in_x, g3b_focus_in_x, g4a_focus_in_x, g4b_focus_in_x, g5a_focus_in_x, g5b_focus_in_x, g6_focus_in_x;
+	 double g1a_focus_in_y, g1b_focus_in_y, g1c_focus_in_y, g2a_focus_in_y, g2b_focus_in_y, gt0_focus_in_y, g2c_focus_in_y, g2d_focus_in_y, g3a_focus_in_y, g3b_focus_in_y, g4a_focus_in_y, g4b_focus_in_y, g5a_focus_in_y, g5b_focus_in_y, g6_focus_in_y;
+	 double g1a_focus_out_x, g1b_focus_out_x, g1c_focus_out_x, g2a_focus_out_x, g2b_focus_out_x, gt0_focus_out_x, g2c_focus_out_x, g2d_focus_out_x, g3a_focus_out_x, g3b_focus_out_x, g4a_focus_out_x, g4b_focus_out_x, g5a_focus_out_x, g5b_focus_out_x, g6_focus_out_x;
+	 double g1a_focus_out_y, g1b_focus_out_y, g1c_focus_out_y, g2a_focus_out_y, g2b_focus_out_y, gt0_focus_out_y, g2c_focus_out_y, g2d_focus_out_y, g3a_focus_out_y, g3b_focus_out_y, g4a_focus_out_y, g4b_focus_out_y, g5a_focus_out_y, g5b_focus_out_y, g6_focus_out_y;
+
+	double g1a_m, g1b_m, g1c_m, g2a_m, g2b_m, g2c_m, g2d_m, g3a_m, g3b_m, g4a_m, g4b_m, g5a_m, g5b_m, g6_m;
+
+	double stack_x, stack_y, stack_length, stack_n_mirrors, stack_tilt, stack_n_pieces, stack_angular_offset, stack_m;
+
+	double pin1_pos, pin2_pos, sample_pos, view_angle=0, focal_length_x,focal_length_y,l_compression_x,l_compression_y,l_expansion_x,l_expansion_y;
+	double u;
+
+	//double sx1,px1,ax1,bx1,kx1,fx1,sx2,px2,ax2,bx2,kx2,fx2,sx3,px3,ax3,bx3,kx3,fx3,sx4,px4,ax4,bx4,kx4,fx4,sx5,px5,ax5,bx5,kx5,fx5,sx6,px6,ax6,bx6,kx6,fx6;
+	//double sy1,py1,ay1,by1,ky1,fy1,sy2,py2,ay2,by2,ky2,fy2,sy3,py3,ay3,by3,ky3,fy3,sy4,py4,ay4,by4,ky4,fy4,sy5,py5,ay5,by5,ky5,fy5,sy6,py6,ay6,by6,ky6,fy6;
+
+	double ax1a,bx1a,fx1a,ax1b,bx1b,fx1b,ax1c,bx1c,fx1c,ax2a,bx2a,fx2a,ax2b,bx2b,fx2b,ax2c,bx2c,fx2c,ax2d,bx2d,fx2d,ax3a,bx3a,fx3a,ax3b,bx3b,fx3b,ax4a,bx4a,fx4a,ax4b,bx4b,fx4b,ax5a,bx5a,fx5a,ax5b,bx5b,fx5b,ax6,bx6,fx6;
+	double ay1a,by1a,fy1a,ay1b,by1b,fy1b,ay1c,by1c,fy1c,ay2a,by2a,fy2a,ay2b,by2b,fy2b,ay2c,by2c,fy2c,ay2d,by2d,fy2d,ay3a,by3a,fy3a,ay3b,by3b,fy3b,ay4a,by4a,fy4a,ay4b,by4b,fy4b,ay5a,by5a,fy5a,ay5b,by5b,fy5b,ay6,by6,fy6;
+
+	double monolith_end,light_shutter_gap,light_shutter_size;
+
+	int expx_shorter_expy=0, compx_shorter_compy=0; /*expansion (compression) in x shorter than expansion in y*/
+	/*everything is calculated under the assumption that the ellipses have a ~ f, so half ellipses have length = focal distance */
+
+	double cold_frac=0.5, graph=1, view_t=0.026, view_c=-0.03, position = 0.027, foc_in = 30, foc_out = 30, draw = 0; /* legacy parameters. */    
+	
+
+// ===========================================================
+// 		define helper functions, TUM
+// ===========================================================
+
+// WFMC
+    double lambda_next(double lam_1)
+        {
+            return (pulse_length / alpha / z_wfmc_2 + lam_1*1e-10 * z_wfmc_1/z_wfmc_2)*1e10;
+        };
+
+    double theta_wfmc(double lam_1, double lam_2)
+        {
+            return (pulse_length + alpha * z_wfmc_1 * (lam_1 - lam_2)*1e-10) * 2*PI*freq_wfmc;
+        };
+    
+    double phi_wfmc1(double lam_1, double lam_2, double position)
+        {
+            return ( t_0 + 0.5*pulse_length + 0.5*alpha*(lam_1+lam_2)*position*1e-10 ) * 2*PI*freq_wfmc;
+        };
+    
+    double phi_wfmc2(double lam_1, double lam_2, double position)
+        {
+            return ( t_0 + 1.5*pulse_length + 0.5*alpha*(3*lam_1-lam_2)*position*1e-10 ) * 2*PI*freq_wfmc;
+        };
+
+
+// FOC
+    double theta_foc(double lam_1, double lam_2, double z_foc, double freq_foc)
+        {
+            return (pulse_length + alpha * ((lam_1 - lam_2)*1e-10 * (z_wfmc_1 + z_wfmc_2 - z_foc))) * 2*PI*freq_foc;
+        };
+
+    double phi_foc(double lam_1, double lam_2, double z_foc, double freq_foc, double theta)
+        {
+            return (t_0 + alpha*1e-10*(z_wfmc_2*lam_2 + (z_foc - z_wfmc_2)*lam_1)) * 2*PI*freq_foc + 0.5*theta;
+        };
+
+
+    // guides helper functions TUM 
+   
+// ====================================================
+// 		define helper functions, PSI
+// ====================================================
+
+double opening (double a, double b, double f, double focus, double length, double start, double end)
+	{	
+		double k;
+		k=-f+focus+length+(start-end)+u;
+		return(2*b*sqrt(1-k*k/(a*a)));
+	};
+
+double aaa (double in, double out, double length, double open, double f)
+	{
+		double k,s,p;
+		k=out+length-in;
+		s=k*k+open*open+4*f*f;
+		p=f*f*k*k;
+		return(sqrt(0.125*(+s+(sqrt(s*s-16*p)))));
+	};
+
+double bbb (double a, double f)
+	{
+		return(sqrt(a*a-f*f));
+	};
+
+%}
+
+
+// ======================================================
+//
+// 		INITIALIZE
+//      
+// ======================================================
+
+
+INITIALIZE
+%{
+    
+// create random seed for SSH simulations TUM
+    #ifndef WIN32
+    struct timeval timev;
+    gettimeofday(&timev, 0);
+    mcseed = timev.tv_usec;
+    printf("seeding to %ld\n", mcseed);
+    srandom(mcseed);
+    #endif
+
+
+
+// ==========================================================
+// 		general settings  and constants
+// ==========================================================
+
+u = 0.000001;                   // 1 micron offset from PSI
+cold_frac = 0.5;	/* 0.5 generates the same amount of cold and thermal. 1 generates only cold, 0 only thermal*/
+graph = 0;		/* graphite filter in, 1, or not, 0, */
+view_t = 0.026;		/* position of the thermal moderator the beam axis points to */
+view_c = -0.03;		/* position of the cold moderator the bispectral mirror reflect */
+position = 0.026;	/* horizontal beam axis displacement */
+foc_in = 30;		/* foc_in is the distance of the first focus of the compression system measured from the 1st pinhole*/
+foc_out = 30;		/* foc_out is the distance of the second focus of the expansion system measured from the 2nd pinhole towards the source*/
+draw = 0;		/* put it to 1 to see the instrument horizontal */
+monolith_end=5.388;
+light_shutter_gap=0.01;
+light_shutter_size=0.5;
+
+/* wfmc positions and calcs*/
+//l_min = 1;
+z_wfmc = 7.00; 
+wfmc1_pos=6.775;
+wfmc2_pos=7.225;
+
+/*pinhole positions */
+pin1_pos=0.5*(wfmc1_pos+wfmc2_pos);
+pin2_pos=50; 
+/* sample position */
+sample_pos=pin2_pos+10.5; // end PSI part was 10 meters
+
+freq_source = 14.0;      	    // Start of TUM part, ESS source frequency
+pulse_length = 0.00286;         // length of the ESS source pulse
+t_0 = 0.00013;                  // rising edge of the source pulse
+t_2 = 0.001;         // approx. falling edge of the  source pulse, 0.00114
+no_choppers = bp_only;      // McStas bug, no direct assignement from DEFINE INSTRUMENT to TRACE
+active_t0_copy = active_t0;
+lambda_min = 1.0;
+wfm1_f_left = 0.893;
+guide_thickness = 0.01;
+
+// makes calculations really beautiful
+alpha = 1.674927351e-27 / 6.62606957e-34;
+
+/* adapt TOF monitors to 4 pulse mode */
+if (num_pulses > 2) {
+    t_scale = 2;
+}
+else {
+    t_scale = 1;
+}
+
+/* optional instrument parameters */
+rot_wfmc1 = 1.0;
+rot_wfmc2 = 1.0;
+//fo1_cut = 1.0;
+//fo2_cut = 1.0;
+//fo3_cut = 1.0;
+//fo4_cut = 1.0;
+//fo5_cut = 1.0;
+// bp_cut = 1.0; // what is this?
+// bp_phase_shift = 1.0; //1.0; // what is this?
+bp_term = 1.0; // what is this?
+bp1_term = 1.0;
+
+
+// =========================================================
+// 		chopper settings  
+// =========================================================
+
+
+/* virtual WFM chopper positions, calculate wfm chopper parameters according to these values using the coldest wavelength band */
+z_wfmc_1 = wfmc1_pos;
+z_wfmc_2 = wfmc2_pos;
+
+/* real WFM chopper positions  
+z_wfmc_1_real = z_wfmc-delta_wfmc/2;
+z_wfmc_2_real = z_wfmc+delta_wfmc/2;
+*/
+
+/* actually used wavelength frames */
+lambda_1 = lambda_min;
+lambda_2 = lambda_next(lambda_1);
+lambda_3 = lambda_next(lambda_2);
+lambda_4 = lambda_next(lambda_3);
+lambda_5 = lambda_next(lambda_4);
+lambda_6 = lambda_next(lambda_5);
+lambda_7 = lambda_next(lambda_6);
+
+/* chopper positions, PSI (wfmcs positions are above) */
+
+T0_pos=8.15;
+foc1_pos=8.4; // 8.35 for v00 works well, is still approved at 8.63
+bp1_pos=foc1_pos+0.02;
+foc2_pos=12.2;
+bp_pos=foc2_pos+0.02; // was +u
+foc3_pos=17;
+foc4_pos=23.69;
+foc5_pos=33;
+
+/*
+z_fo_1 = foc1_pos; //TUM (removed)
+z_fo_2 = foc2_pos;
+z_bandpass = bp_pos;
+z_fo_3 = foc3_pos;
+z_fo_4 = foc4_pos;
+z_fo_5 = foc5_pos;
+z_t0 = T0_pos; */
+
+/* chopper housing thicknesses */
+
+T0_housing = T0_thickness+0.01;
+foc_housing = foc_thickness+0.045;
+bp_housing = 0.02; /* BP chopper is housed together with FOC2. If that increases the thickness of the housing, add here the difference */
+
+
+/* chopper radii */
+radius_wfmc = 0.35;
+radius_foc1 = 0.5;
+radius_bp1 = radius_foc1;
+radius_t0 = 0.3;
+radius_foc2 = 0.5; //was 0.6
+radius_bp = radius_foc2;
+radius_foc3 = 0.6;
+radius_foc4 = 0.75;
+radius_foc5 = 0.75; // 0.75 for now see if 0.9 is really needed
+
+
+/* chopper window heights */
+window_height_wfmc = 0.07;
+window_height_foc1 = 0.075;
+window_height_foc2 = 0.08;
+window_height_foc3 = 0.085;
+window_height_foc4 = 0.085;
+window_height_foc5 = 0.085;
+window_height_bp1   = window_height_foc1;
+window_height_bp   = window_height_foc2;
+window_height_t0   = window_height_foc1;
+
+
+/* chopper frequencies for calculations */
+freq_wfmc = 4*freq_source;
+freq_fo_1 = 3*freq_source;
+freq_fo_2 = 3*freq_source;
+freq_fo_3 = 2*freq_source;
+freq_fo_4 = 1*freq_source;
+freq_fo_5 = 1*freq_source;
+freq_bp1  = 1*freq_source; 
+freq_bp   = 1*freq_source; //why not 3?
+freq_t0   = 1*freq_source; //2*
+	
+	
+/* actual chopper frequencies */
+if (chopper_mode <= 4)
+{
+    actual_wfmc_1 = 4*freq_source*rot_wfmc1;
+    actual_wfmc_2 = 4*freq_source*rot_wfmc2;
+    actual_fo_1 = 3*freq_source;
+    actual_fo_2 = 3*freq_source;
+    actual_fo_3 = 2*freq_source;
+    actual_fo_4 = 1*freq_source;
+    actual_fo_5 = 1*freq_source;
+}
+actual_t0 = freq_t0;
+
+
+/* adjust bandpass frequency for 3 frames  or 6 frames */	
+if (chopper_mode == 0 || chopper_mode == 5)
+{
+	actual_bp1  = 1*freq_bp1/2;
+	actual_bp  = 1*freq_bp/2;
+}
+else 
+{
+	actual_bp1  = 1*freq_bp1;
+	actual_bp  = 1*freq_bp;
+};
+
+
+/* T0 chopper */
+t0_length = T0_thickness;
+
+
+// =============================================
+// 		PSI guide system settings
+// =============================================
+
+/* ABSOLUTE POSITIONS of the foci of the extraction system (g1) */
+bi_focus_in_x=-1.54;
+bi_focus_out_x=7.16;
+bi_focus_in_y=0;
+bi_focus_out_y=36;
+
+
+/* ABSOLUTE POSITIONS of the foci of the expansion system (g2) and (1/2 g3)*/
+expansion_focus_in_x=pin1_pos;
+expansion_focus_out_x=pin2_pos-foc_out;
+expansion_focus_in_y=0;
+expansion_focus_out_y=36;
+
+
+/* ABSOLUTE POSITIONS of the foci of the compression system  (g5y) (g6) and (g7x)*/
+compression_focus_in_x=pin1_pos+foc_in;
+compression_focus_out_x=pin2_pos;
+compression_focus_in_y=14;
+compression_focus_out_y=pin2_pos;
+
+/* focal length of the half-ellipses */
+focal_length_x=0.5*(expansion_focus_out_x-expansion_focus_in_x);
+focal_length_y=0.5*(expansion_focus_out_y-expansion_focus_in_y);
+
+
+
+/* g1a : bi-spectral extraction system */
+
+g1a_start=2.016;
+g1a_end=monolith_end-u;
+g1a_open_x=0.04405;
+g1a_open_y=0.03418;
+g1a_focus_in_x=g1a_start-bi_focus_in_x;
+g1a_focus_in_y=g1a_start-bi_focus_in_y;
+g1a_focus_out_x=bi_focus_out_x-(g1a_end+u);
+g1a_focus_out_y=bi_focus_out_y-(g1a_end+u);
+g1a_length=g1a_end-g1a_start;
+g1a_m=5;
+
+fx1a=0.5*(g1a_focus_out_x+g1a_length+g1a_focus_in_x);
+ax1a=aaa(g1a_focus_in_x, g1a_focus_out_x,g1a_length,g1a_open_x,fx1a);
+bx1a=bbb(ax1a,fx1a);
+
+fy1a=0.5*(g1a_focus_out_y+g1a_length+g1a_focus_in_y);
+ay1a=aaa(g1a_focus_in_y, g1a_focus_out_y,g1a_length,g1a_open_y,fy1a);
+by1a=bbb(ay1a,fy1a);
+
+
+
+/* bi-spectral mirrors parameters*/
+stack_x=g1a_open_x;
+stack_y=g1a_open_y;
+stack_length=0.3;
+stack_n_mirrors=0;
+stack_n_pieces=5;
+stack_m=5;
+
+/* calculations of angles */
+
+if (draw == 0)
+	view_angle=-RAD2DEG*atan((view_t-position)/g1a_start);
+stack_tilt=0.5*(-view_angle-RAD2DEG*atan((view_c-position)/(g1a_start+stack_length*0.5)));
+stack_angular_offset=stack_tilt*0.037377;
+printf("-------------------------------------------------------------\n");
+printf("view_angle = %f, stack_tilt = %f , offset: %f \n",view_angle, stack_tilt,stack_angular_offset);
+printf("------------------------------------------------------------\n");
+
+/* g1b */
+
+g1b_start=g1a_end+light_shutter_gap;
+g1b_m=5;
+//g1b_length=(focal_length_x-g1b_focus_in_x)-u;
+g1b_end=g1b_start+light_shutter_size-u;
+g1b_length=g1b_end-g1b_start;
+
+
+g1b_focus_in_x=g1b_start-bi_focus_in_x;
+g1b_focus_out_x=bi_focus_out_x-(g1b_end+u);
+
+
+g1b_open_x=opening(ax1a,bx1a,fx1a,g1a_focus_in_x,g1a_length,g1b_start,g1a_end);
+fx1b=0.5*(g1b_focus_out_x+g1b_length+g1b_focus_in_x);
+ax1b=aaa(g1b_focus_in_x, g1b_focus_out_x,g1b_length,g1b_open_x,fx1b);
+bx1b=bbb(ax1b,fx1b);
+
+
+g1b_focus_in_y=g1b_start-bi_focus_in_y;
+g1b_focus_out_y=bi_focus_out_y-(g1b_end+u);
+
+
+g1b_open_y=opening(ay1a,by1a,fy1a,g1a_focus_in_y,g1a_length,g1b_start,g1a_end);
+fy1b=0.5*(g1b_focus_out_y+g1b_length+g1b_focus_in_y);
+ay1b=aaa(g1b_focus_in_y, g1b_focus_out_y,g1b_length,g1b_open_y,fy1b);
+by1b=bbb(ay1b,fy1b);
+/* g1c */
+
+g1c_start=g1b_end+light_shutter_gap;
+g1c_m=5;
+//g1c_length=(focal_length_x-g1c_focus_in_x)-u;
+g1c_end=wfmc1_pos-u;
+g1c_length=g1c_end-g1c_start;
+
+
+g1c_focus_in_x=g1c_start-bi_focus_in_x;
+g1c_focus_out_x=bi_focus_out_x-(g1c_end+u);
+
+
+g1c_open_x=opening(ax1b,bx1b,fx1b,g1b_focus_in_x,g1b_length,g1c_start,g1b_end);
+fx1c=0.5*(g1c_focus_out_x+g1c_length+g1c_focus_in_x);
+ax1c=aaa(g1c_focus_in_x, g1c_focus_out_x,g1c_length,g1c_open_x,fx1c);
+bx1c=bbb(ax1c,fx1c);
+
+
+g1c_focus_in_y=g1c_start-bi_focus_in_y;
+g1c_focus_out_y=bi_focus_out_y-(g1c_end+u);
+
+
+g1c_open_y=opening(ay1b,by1b,fy1b,g1b_focus_in_y,g1b_length,g1c_start,g1b_end);
+fy1c=0.5*(g1c_focus_out_y+g1c_length+g1c_focus_in_y);
+ay1c=aaa(g1c_focus_in_y, g1c_focus_out_y,g1c_length,g1c_open_y,fy1c);
+by1c=bbb(ay1c,fy1c);
+
+
+/* g2a */
+
+g2a_start=wfmc2_pos + 0.025; // hard coded since g2a_open_x and ... _y have to be re-calcualted for this case.
+g2a_m=5;
+//g2a_end=g2a_start+g2a_length-T0_housing/2.0-u;
+//g2a_length=(focal_length_x-g2a_focus_in_x)-u;
+g2a_end=T0_pos-T0_housing/2.0-u;
+g2a_length=g2a_end-g2a_start;
+
+
+g2a_focus_in_x=g2a_start-expansion_focus_in_x;
+g2a_focus_out_x=expansion_focus_out_x-(g2a_end+u);
+
+
+g2a_open_x=0.022;
+fx2a=0.5*(g2a_focus_out_x+g2a_length+g2a_focus_in_x);
+ax2a=aaa(g2a_focus_in_x, g2a_focus_out_x,g2a_length,g2a_open_x,fx2a);
+bx2a=bbb(ax2a,fx2a);
+
+
+g2a_focus_in_y=g2a_start-expansion_focus_in_y;
+g2a_focus_out_y=expansion_focus_out_y-(g2a_end+u);
+
+
+//g2a_open_y=opening(ay1b,by1b,fy1b,g1b_focus_in_y,g1b_length,g2a_start,g1b_end);
+g2a_open_y=opening(ay1c,by1c,fy1c,g1c_focus_in_y,g1c_length,g2a_start,g1c_end);
+fy2a=0.5*(g2a_focus_out_y+g2a_length+g2a_focus_in_y);
+ay2a=aaa(g2a_focus_in_y, g2a_focus_out_y,g2a_length,g2a_open_y,fy2a);
+by2a=bbb(ay2a,fy2a);
+
+
+/* g2b */
+
+g2b_start=g2a_end+T0_housing+u;
+g2b_m=5;
+//g2b_length=(focal_length_x-g2b_focus_in_x)-u;
+//g2b_end=g2b_start+g2b_length-foc_housing/2.0-u;
+g2b_end=foc1_pos-foc_housing/2.0-u;
+g2b_length=g2b_end-g2b_start;
+
+g2b_focus_in_x=g2b_start-expansion_focus_in_x;
+g2b_focus_out_x=expansion_focus_out_x-(g2b_end+u);
+
+
+g2b_open_x=opening(ax2a,bx2a,fx2a,g2a_focus_in_x,g2a_length,g2b_start,g2a_end);
+fx2b=0.5*(g2b_focus_out_x+g2b_length+g2b_focus_in_x);
+ax2b=aaa(g2b_focus_in_x, g2b_focus_out_x,g2b_length,g2b_open_x,fx2b);
+bx2b=bbb(ax2b,fx2b);
+
+
+g2b_focus_in_y=g2b_start-expansion_focus_in_y;
+g2b_focus_out_y=expansion_focus_out_y-(g2b_end+u);
+
+
+g2b_open_y=opening(ay2a,by2a,fy2a,g2a_focus_in_y,g2a_length,g2b_start,g2a_end);
+fy2b=0.5*(g2b_focus_out_y+g2b_length+g2b_focus_in_y);
+ay2b=aaa(g2b_focus_in_y, g2b_focus_out_y,g2b_length,g2b_open_y,fy2b);
+by2b=bbb(ay2b,fy2b);
+
+/* opening T0 at T0 center /*
+
+/* gt0size */
+
+gt0_start=g2a_end+T0_housing/2;
+gt0_end=foc1_pos-foc_housing/2.0-u;  //gt0_length=gt0_end-gt0_start;
+//gt=_end=foc1_pos-(foc_housing+bp_housing)/2.0-u;
+
+gt0_focus_in_x=g2b_start-expansion_focus_in_x;
+gt0_focus_out_x=expansion_focus_out_x-(gt0_end+u);
+
+gt0_size_h=opening(ax2a,bx2a,fx2a,g2a_focus_in_x,g2a_length,gt0_start,g2a_end);
+
+gt0_focus_in_y=gt0_start-expansion_focus_in_y;
+gt0_focus_out_y=expansion_focus_out_y-(gt0_end+u);
+
+gt0_size_v=opening(ay2a,by2a,fy2a,g2a_focus_in_y,g2a_length,gt0_start,g2a_end);
+
+
+/* g2c */
+
+//g2c_start=foc1_pos+foc_housing/2.0;
+g2c_start=foc1_pos + foc_housing/2.0 + bp_housing;
+g2c_m=5;
+//g2c_length=(focal_length_x-g2c_focus_in_x)-u;
+//g2c_end=g2c_start+g2c_length-(foc_housing+bp_housing)/2.0-u;
+g2c_end=foc2_pos-foc_housing/2.0;
+g2c_length=g2c_end-g2c_start;
+
+g2c_focus_in_x=g2c_start-expansion_focus_in_x;
+g2c_focus_out_x=expansion_focus_out_x-(g2c_end+u);
+
+g2c_open_x=opening(ax2b,bx2b,fx2b,g2b_focus_in_x,g2b_length,g2c_start,g2b_end);
+fx2c=0.5*(g2c_focus_out_x+g2c_length+g2c_focus_in_x);
+ax2c=aaa(g2c_focus_in_x, g2c_focus_out_x,g2c_length,g2c_open_x,fx2c);
+bx2c=bbb(ax2c,fx2c);
+
+g2c_focus_in_y=g2c_start-expansion_focus_in_y;
+g2c_focus_out_y=expansion_focus_out_y-(g2c_end+u);
+
+g2c_open_y=opening(ay2b,by2b,fy2b,g2b_focus_in_y,g2b_length,g2c_start,g2b_end);
+fy2c=0.5*(g2c_focus_out_y+g2c_length+g2c_focus_in_y);
+ay2c=aaa(g2c_focus_in_y, g2c_focus_out_y,g2c_length,g2c_open_y,fy2c);
+by2c=bbb(ay2c,fy2c);
+
+
+/* g2d */
+
+g2d_start=foc2_pos+foc_housing/2.0+bp_housing;
+g2d_m=5;
+//g2d_length=(focal_length_x-g2d_focus_in_x-g2a_length-g2b_length-g2c_length-2*foc_housing-2*bp_housing-T0_housing)-u;
+//g2d_end=g2d_start+g2d_length-u;
+g2d_end=13.5-u;
+g2d_length=g2d_end-g2d_start;
+
+g2d_focus_in_x=g2d_start-expansion_focus_in_x;
+g2d_focus_out_x=expansion_focus_out_x-(g2d_end+u);
+
+g2d_open_x=opening(ax2c,bx2c,fx2c,g2c_focus_in_x,g2c_length,g2d_start,g2c_end);
+fx2d=0.5*(g2d_focus_out_x+g2d_length+g2d_focus_in_x);
+ax2d=aaa(g2d_focus_in_x, g2d_focus_out_x,g2d_length,g2d_open_x,fx2d);
+bx2d=bbb(ax2d,fx2d);
+
+g2d_focus_in_y=g2d_start-expansion_focus_in_y;
+g2d_focus_out_y=expansion_focus_out_y-(g2d_end+u);
+
+g2d_open_y=opening(ay2c,by2c,fy2c,g2c_focus_in_y,g2c_length,g2d_start,g2c_end);
+fy2d=0.5*(g2d_focus_out_y+g2d_length+g2d_focus_in_y);
+ay2d=aaa(g2d_focus_in_y, g2d_focus_out_y,g2d_length,g2d_open_y,fy2d);
+by2d=bbb(ay2d,fy2d);
+
+
+/* g3a */
+
+g3a_start=g2d_end+u;
+g3a_m=5;
+//g3a_length=(focal_length_y-g3a_start)-u;
+//g3a_end=g3a_start+g3a_length-foc_housing/2.0-u;
+g3a_end=foc3_pos-foc_housing/2.0;
+g3a_length=g3a_end-g3a_start;
+
+g3a_open_x=opening(ax2d,bx2d,fx2d,g2d_focus_in_x,g2d_length,g3a_start,g2d_end);
+
+g3a_focus_in_y=g3a_start-expansion_focus_in_y;
+g3a_focus_out_y=expansion_focus_out_y-(g3a_end+u);
+
+g3a_open_y=opening(ay2d,by2d,fy2d,g2d_focus_in_y,g2d_length,g3a_start,g2d_end);
+fy3a=0.5*(g3a_focus_out_y+g3a_length+g3a_focus_in_y);
+ay3a=aaa(g3a_focus_in_y, g3a_focus_out_y,g3a_length,g3a_open_y,fy3a);
+by3a=bbb(ay3a,fy3a);
+
+
+/* g3b */
+
+g3b_start=g3a_end+foc_housing+u;
+g3b_m=5;
+g3b_focus_in_y=g3b_start-expansion_focus_in_y;
+
+g3b_length=(focal_length_y-g3b_start)-u;
+//g3b_length=focal_length_y-g3b_focus_in_y-g3a_length-foc_housing-u;
+g3b_end=g3b_start+g3b_length-u;
+g3b_focus_out_y=expansion_focus_out_y-(g3b_end+u);
+
+g3b_open_x=g3a_open_x;
+
+g3b_open_y=opening(ay3a,by3a,fy3a,g3a_focus_in_y,g3a_length,g3b_start,g3a_end);
+fy3b=0.5*(g3b_focus_out_y+g3b_length+g3b_focus_in_y);
+ay3b=aaa(g3b_focus_in_y, g3b_focus_out_y,g3b_length,g3b_open_y,fy3b);
+by3b=bbb(ay3b,fy3b);
+
+
+/* g4a */
+
+g4a_start=g3b_end+u;
+g4a_m=5;
+//g4a_length=(focal_length_y-g4a_start)-u;
+//g4a_end=g4a_start+g4a_length-foc_housing/2.0-u;
+g4a_end=foc4_pos-foc_housing/2.0;
+g4a_length=g4a_end-g4a_start;
+
+g4a_open_x=g3b_open_x;
+
+g4a_focus_in_y=g4a_start-expansion_focus_in_y;
+g4a_focus_out_y=expansion_focus_out_y-(g4a_end+u);
+
+g4a_open_y=opening(ay3b,by3b,fy3b,g3b_focus_in_y,g3b_length,g4a_start,g3b_end);
+fy4a=0.5*(g4a_focus_out_y+g4a_length+g4a_focus_in_y);
+ay4a=aaa(g4a_focus_in_y, g4a_focus_out_y,g4a_length,g4a_open_y,fy4a);
+by4a=bbb(ay4a,fy4a);
+
+
+/* g4b */
+
+g4b_start=g4a_end+foc_housing+u;
+g4b_m=5;
+g4b_length=pin2_pos-focal_length_y-g4b_start-u;
+g4b_end=g4b_start+g4b_length-u;
+
+g4b_open_x=g4a_open_x;
+
+g4b_open_y=g4a_open_y;
+
+
+/* g5a */
+
+g5a_start=g4b_end+u;
+g5a_m=5;
+//g5a_length=(focal_length_x-g5a_focus_in_x)-u;
+//g5a_end=g5a_start+g5a_length-foc_housing/2.0-u;
+g5a_end=foc5_pos-foc_housing/2.0;
+g5a_length=g5a_end-g5a_start;
+
+g5a_open_x=g4b_open_x;
+
+g5a_focus_in_y=g5a_start-compression_focus_in_y;
+g5a_focus_out_y=compression_focus_out_y-(g5a_end+u);
+
+//g5a_open_y=opening(ay4b,by4b,fy4b,g4b_focus_in_y,g4b_length,g5a_start,g4b_end);
+g5a_open_y=g4b_open_y;
+fy5a=0.5*(g5a_focus_out_y+g5a_length+g5a_focus_in_y);
+ay5a=aaa(g5a_focus_in_y, g5a_focus_out_y,g5a_length,g5a_open_y,fy5a);
+by5a=bbb(ay5a,fy5a);
+
+
+/* g5b */
+
+g5b_start=g5a_end+foc_housing+u;
+g5b_m=5;
+//g5b_length=(focal_length_x-g5b_focus_in_x-g5a_length-foc_housing)-u;
+g5b_length=pin2_pos-focal_length_x-g5b_start-u;
+g5b_end=g5b_start+g5b_length-u;
+
+g5b_open_x=g5a_open_x;
+
+g5b_focus_in_y=g5b_start-compression_focus_in_y;
+g5b_focus_out_y=compression_focus_out_y-(g5b_end+u);
+
+g5b_open_y=opening(ay5a,by5a,fy5a,g5a_focus_in_y,g5a_length,g5b_start,g5a_end);
+fy5b=0.5*(g5b_focus_out_y+g5b_length+g5b_focus_in_y);
+ay5b=aaa(g5b_focus_in_y, g5b_focus_out_y,g5b_length,g5b_open_y,fy5b);
+by5b=bbb(ay5b,fy5b);
+
+
+/* g6 */
+
+g6_start=g5b_end+u;
+g6_m=5;
+g6_end=49-u;
+g6_length=g6_end-g6_start;
+
+g6_focus_in_x=g6_start-compression_focus_in_x;
+g6_focus_out_x=compression_focus_out_x-(g6_end+u);
+
+g6_open_x=g5b_open_x;
+fx6=0.5*(g6_focus_out_x+g6_length+g6_focus_in_x);
+ax6=aaa(g6_focus_in_x, g6_focus_out_x,g6_length,g6_open_x,fx6);
+bx6=bbb(ax6,fx6);
+
+g6_focus_in_y=g6_start-compression_focus_in_y;
+g6_focus_out_y=compression_focus_out_y-(g6_end+u);
+
+g6_open_y=opening(ay5b,by5b,fy5b,g5b_focus_in_y,g5b_length,g6_start,g5b_end);
+fy6=0.5*(g6_focus_out_y+g6_length+g6_focus_in_y);
+ay6=aaa(g6_focus_in_y, g6_focus_out_y,g6_length,g6_open_y,fy6);
+by6=bbb(ay6,fy6);
+
+
+// =============================================
+// 		WFM chopper calculations
+// =============================================
+
+/* wfm chopper windows */
+theta_a = theta_wfmc(lambda_1, lambda_2);
+theta_b = theta_wfmc(lambda_2, lambda_3);
+theta_c = theta_wfmc(lambda_3, lambda_4);
+theta_d = theta_wfmc(lambda_4, lambda_5);
+theta_e = theta_wfmc(lambda_5, lambda_6);
+theta_f = theta_wfmc(lambda_6, lambda_7);
+theta_f_cut = theta_f * wfm1_f_left;
+
+/* wfm chopper opening times  */
+delta_t_a = theta_a / (2*PI*freq_wfmc);
+delta_t_b = theta_b / (2*PI*freq_wfmc);
+delta_t_c = theta_c / (2*PI*freq_wfmc);
+delta_t_d = theta_d / (2*PI*freq_wfmc);
+delta_t_e = theta_e / (2*PI*freq_wfmc);
+delta_t_f = theta_f / (2*PI*freq_wfmc);
+delta_t_f_cut = theta_f_cut / (2*PI*freq_wfmc);
+
+/* --- WFM Chopper 1 --- */
+phi_1a = phi_wfmc1(lambda_1, lambda_2, z_wfmc_1)*rot_wfmc1;
+phi_1b = phi_wfmc1(lambda_2, lambda_3, z_wfmc_1)*rot_wfmc1;
+phi_1c = phi_wfmc1(lambda_3, lambda_4, z_wfmc_1)*rot_wfmc1;
+phi_1d = phi_wfmc1(lambda_4, lambda_5, z_wfmc_1)*rot_wfmc1;
+phi_1e = phi_wfmc1(lambda_5, lambda_6, z_wfmc_1)*rot_wfmc1;
+phi_1f = phi_wfmc1(lambda_6, lambda_7, z_wfmc_1);
+phi_1f_cut = (phi_1f + 0.5*theta_f*(1.0-wfm1_f_left))*rot_wfmc1;
+phi_1_rotate = phi_1f_cut;
+if (chopper_mode >= 5)
+{
+    phi_1a -= phi_1_rotate;
+    phi_1b -= phi_1_rotate;
+    phi_1c -= phi_1_rotate;
+    phi_1d -= phi_1_rotate;
+    phi_1e -= phi_1_rotate;
+    phi_1f_cut -= phi_1_rotate;
+};
+
+
+/* --- WFM Chopper 2 --- */
+phi_2a = phi_wfmc2(lambda_1, lambda_2, z_wfmc_1)*rot_wfmc2;
+phi_2b = phi_wfmc2(lambda_2, lambda_3, z_wfmc_1)*rot_wfmc2;
+phi_2c = phi_wfmc2(lambda_3, lambda_4, z_wfmc_1)*rot_wfmc2;
+phi_2d = phi_wfmc2(lambda_4, lambda_5, z_wfmc_1)*rot_wfmc2;
+phi_2e = phi_wfmc2(lambda_5, lambda_6, z_wfmc_1)*rot_wfmc2;
+phi_2f = phi_wfmc2(lambda_6, lambda_7, z_wfmc_1)*rot_wfmc2;
+phi_2_rotate = phi_2f;
+if (chopper_mode >= 5)
+{
+    phi_2a -= phi_2_rotate;
+    phi_2b -= phi_2_rotate;
+    phi_2c -= phi_2_rotate;
+    phi_2d -= phi_2_rotate;
+    phi_2e -= phi_2_rotate;
+    phi_2f -= phi_2_rotate;
+};
+
+
+// ==============================================
+// 		T0 chopper calculations
+// ==============================================
+
+// gt0_size_h _v = is defined above after g2b
+width_t0 = gt0_size_h + 2.0*guide_thickness;
+height_t0 = gt0_size_v + 2.0*guide_thickness;
+
+theta_p = 2*PI*freq_t0*(t_0 + pulse_length + t_2);
+theta_g = 2.0 * atan(0.5*width_t0 / (sqrt(radius_t0*radius_t0 - 0.25*width_t0*width_t0) - height_t0));
+
+theta_t0 = theta_p + theta_g; // (Das ist der Winkel des Hammers also nicht das Fenster)
+theta_t0_really = 2*PI - theta_t0; // (Oeffnungswinkel)
+
+phi_t0 = theta_g/2.0 + theta_t0_really/2.0 + PI*freq_t0*(pulse_length + t_2);
+//phi_t0 = theta_g/2.0; //+ theta_t0_really/2.0 - 2*PI*freq_t0*t_0; 
+
+
+// ==============================================
+// 		bandpass chopper calculations
+// ==============================================
+//
+// BP1
+//
+
+bp1_correction  = bp1_term*atan(g2c_open_x/(2*radius_bp1-window_height_bp1-g2c_open_x));
+theta_bp1  = (pulse_length + alpha*(z_wfmc_1*(lambda_3-lambda_4-lambda_2)*1e-10 + bp1_pos* (lambda_4-lambda_1)*1e-10 + z_wfmc_2*lambda_1*1e-10)) * 2*PI*freq_bp1 + 2*bp1_cut*bp1_correction;
+
+if (chopper_mode == 0 || chopper_mode == 5)
+{
+    phi_bp1  = (t_0 + alpha*(lambda_2*z_wfmc_2*1e-10 + lambda_1*(bp1_pos-z_wfmc_2)*1e-10)) * PI*freq_bp1 + 0.5*theta_bp1 - bp1_cut*bp1_correction;
+}
+else if (chopper_mode == 1 || chopper_mode == 6)
+{
+    phi_bp1  = (t_0 + alpha*(lambda_2*z_wfmc_2*1e-10 + lambda_1*(bp1_pos-z_wfmc_2)*1e-10)) * 2*PI*freq_bp1 + 0.5*theta_bp1 - bp1_cut*bp1_correction; // beginning of frame a
+    phi_bp1_shift = 0.5*theta_bp1-2*bp1_cut*bp1_correction; // hard coded, delta_phi = half of frame a window
+    phi_bp1 = phi_bp1 - (1.0-bp1_phase_shift)*phi_bp1_shift;
+}
+else if (chopper_mode == 2 || chopper_mode == 7)
+{
+    phi_bp1  = (t_0 + alpha*(lambda_3*z_wfmc_2*1e-10 + lambda_2*(bp1_pos-z_wfmc_2)*1e-10)) * 2*PI*freq_bp1 + 0.5*theta_bp1 - bp1_cut*bp1_correction; // beginning of frame b
+    phi_bp1_shift = (alpha*1e-10*(-lambda_1*z_wfmc_1 + lambda_2*(z_wfmc_1-z_wfmc_2) + lambda_3*z_wfmc_2) - pulse_length)*2*PI*freq_bp1;
+    phi_bp1 = phi_bp1 - (1.0-bp1_phase_shift)*phi_bp1_shift;
+}
+else if (chopper_mode == 3 || chopper_mode == 8)
+{
+    phi_bp1  = (t_0 + alpha*(lambda_4*z_wfmc_2*1e-10 + lambda_3*(bp1_pos-z_wfmc_2)*1e-10)) * 2*PI*freq_bp1 + 0.5*theta_bp1 - bp1_cut*bp1_correction; // beginning of frame c
+    phi_bp1_shift = (alpha*1e-10*(-lambda_2*z_wfmc_1 + lambda_3*(z_wfmc_1-z_wfmc_2) + lambda_4*z_wfmc_2) - pulse_length)*2*PI*freq_bp1;
+    phi_bp1 = phi_bp1 - (1.0-bp1_phase_shift)*phi_bp1_shift;
+}
+else
+{
+    phi_bp1  = (t_0 + alpha*(lambda_5*z_wfmc_2*1e-10 + lambda_4*(bp1_pos-z_wfmc_2)*1e-10)) * 2*PI*freq_bp1 + 0.5*theta_bp1 - bp1_cut*bp1_correction; // beginning of frame d
+    phi_bp1_shift = (alpha*1e-10*(-lambda_3*z_wfmc_1 + lambda_4*(z_wfmc_1-z_wfmc_2) + lambda_5*z_wfmc_2) - pulse_length)*2*PI*freq_bp1;
+    phi_bp1 = phi_bp1 - (1.0-bp1_phase_shift)*phi_bp1_shift;
+}; 
+//
+// BP
+//
+
+bp_correction  = bp_term*atan(g2d_open_x/(2*radius_bp-window_height_bp-g2d_open_x));
+theta_bp  = (pulse_length + alpha*(z_wfmc_1*(lambda_3-lambda_4-lambda_2)*1e-10 + bp_pos* (lambda_4-lambda_1)*1e-10 + z_wfmc_2*lambda_1*1e-10)) * 2*PI*freq_bp + 2*bp_cut*bp_correction;
+
+if (chopper_mode == 0 || chopper_mode == 5)
+{
+    phi_bp  = (t_0 + alpha*(lambda_2*z_wfmc_2*1e-10 + lambda_1*(bp_pos-z_wfmc_2)*1e-10)) * PI*freq_bp + 0.5*theta_bp - bp_cut*bp_correction;
+}
+else if (chopper_mode == 1 || chopper_mode == 6)
+{
+    phi_bp  = (t_0 + alpha*(lambda_2*z_wfmc_2*1e-10 + lambda_1*(bp_pos-z_wfmc_2)*1e-10)) * 2*PI*freq_bp + 0.5*theta_bp - bp_cut*bp_correction; // beginning of frame a
+    phi_bp_shift = 0.5*theta_bp-2*bp_cut*bp_correction; // hard coded, delta_phi = half of frame a window
+    phi_bp = phi_bp - (1.0-bp_phase_shift)*phi_bp_shift;
+}
+else if (chopper_mode == 2 || chopper_mode == 7)
+{
+    phi_bp  = (t_0 + alpha*(lambda_3*z_wfmc_2*1e-10 + lambda_2*(bp_pos-z_wfmc_2)*1e-10)) * 2*PI*freq_bp + 0.5*theta_bp - bp_cut*bp_correction; // beginning of frame b
+    phi_bp_shift = (alpha*1e-10*(-lambda_1*z_wfmc_1 + lambda_2*(z_wfmc_1-z_wfmc_2) + lambda_3*z_wfmc_2) - pulse_length)*2*PI*freq_bp;
+    phi_bp = phi_bp - (1.0-bp_phase_shift)*phi_bp_shift;
+}
+else if (chopper_mode == 3 || chopper_mode == 8)
+{
+    phi_bp  = (t_0 + alpha*(lambda_4*z_wfmc_2*1e-10 + lambda_3*(bp_pos-z_wfmc_2)*1e-10)) * 2*PI*freq_bp + 0.5*theta_bp - bp_cut*bp_correction; // beginning of frame c
+    phi_bp_shift = (alpha*1e-10*(-lambda_2*z_wfmc_1 + lambda_3*(z_wfmc_1-z_wfmc_2) + lambda_4*z_wfmc_2) - pulse_length)*2*PI*freq_bp;
+    phi_bp = phi_bp - (1.0-bp_phase_shift)*phi_bp_shift;
+}
+else
+{
+    phi_bp  = (t_0 + alpha*(lambda_5*z_wfmc_2*1e-10 + lambda_4*(bp_pos-z_wfmc_2)*1e-10)) * 2*PI*freq_bp + 0.5*theta_bp - bp_cut*bp_correction; // beginning of frame d
+    phi_bp_shift = (alpha*1e-10*(-lambda_3*z_wfmc_1 + lambda_4*(z_wfmc_1-z_wfmc_2) + lambda_5*z_wfmc_2) - pulse_length)*2*PI*freq_bp;
+    phi_bp = phi_bp - (1.0-bp_phase_shift)*phi_bp_shift;
+};
+
+
+// ================================================
+// 	     frame overlap chopper calculations 
+// ================================================
+
+/* --- FO Chopper 1 --- */
+theta_fo_1a = theta_foc(lambda_1, lambda_2, foc1_pos, freq_fo_1);
+theta_fo_1b = theta_foc(lambda_2, lambda_3, foc1_pos, freq_fo_1);
+theta_fo_1c = theta_foc(lambda_3, lambda_4, foc1_pos, freq_fo_1);
+theta_fo_1d = theta_foc(lambda_4, lambda_5, foc1_pos, freq_fo_1);
+theta_fo_1e = theta_foc(lambda_5, lambda_6, foc1_pos, freq_fo_1);
+theta_fo_1f = theta_foc(lambda_6, lambda_7, foc1_pos, freq_fo_1);
+
+theta_fo_1a_cut = theta_fo_1a; //* fo1_cut;
+theta_fo_1b_cut = theta_fo_1b; // * fo1_cut;
+theta_fo_1c_cut = theta_fo_1c; // * 0.94; //fo1_cut;
+theta_fo_1d_cut = theta_fo_1d; // * (fo1_cut + 0.26); // * 0.96/fo1_cut; //fo1_cut; // * 0.86; //fo1_cut;
+theta_fo_1e_cut = theta_fo_1e * 0.905; //0.875; // * 0.77/fo1_cut; //(fo1_cut - 0.2); // * 0.66; //fo1_cut; //* 0.94;
+theta_fo_1f_cut = theta_fo_1f * 0.75; // * 0.64/fo1_cut; //(fo1_cut - 0.3); //  *  0.56; //fo1_cut;
+
+phi_fo_1a = phi_foc(lambda_1, lambda_2, foc1_pos, freq_fo_1, theta_fo_1a);
+phi_fo_1b = phi_foc(lambda_2, lambda_3, foc1_pos, freq_fo_1, theta_fo_1b);
+phi_fo_1c = phi_foc(lambda_3, lambda_4, foc1_pos, freq_fo_1, theta_fo_1c); // + 0.5 * (theta_fo_1c - theta_fo_1c_cut);
+phi_fo_1d = phi_foc(lambda_4, lambda_5, foc1_pos, freq_fo_1, theta_fo_1d); // + 0.5 * (theta_fo_1d - theta_fo_1d_cut);
+phi_fo_1e = phi_foc(lambda_5, lambda_6, foc1_pos, freq_fo_1, theta_fo_1e) + 0.5 * (theta_fo_1e - theta_fo_1e_cut);
+phi_fo_1f = phi_foc(lambda_6, lambda_7, foc1_pos, freq_fo_1, theta_fo_1f) + 0.5 * (theta_fo_1f - theta_fo_1f_cut);
+phi_foc1_rotate = phi_fo_1f;
+if (chopper_mode >= 5)
+{
+    phi_fo_1a -= phi_foc1_rotate;
+    phi_fo_1b -= phi_foc1_rotate;
+    phi_fo_1c -= phi_foc1_rotate;
+    phi_fo_1d -= phi_foc1_rotate;
+    phi_fo_1e -= phi_foc1_rotate;
+    phi_fo_1f -= phi_foc1_rotate;
+};
+
+
+/* --- FO Chopper 2 --- */
+theta_fo_2a = theta_foc(lambda_1, lambda_2, foc2_pos, freq_fo_2);
+theta_fo_2b = theta_foc(lambda_2, lambda_3, foc2_pos, freq_fo_2);
+theta_fo_2c = theta_foc(lambda_3, lambda_4, foc2_pos, freq_fo_2);
+theta_fo_2d = theta_foc(lambda_4, lambda_5, foc2_pos, freq_fo_2);
+theta_fo_2e = theta_foc(lambda_5, lambda_6, foc2_pos, freq_fo_2);
+theta_fo_2f = theta_foc(lambda_6, lambda_7, foc2_pos, freq_fo_2);
+
+theta_fo_2a_cut = theta_fo_2a; // * fo2_cut;
+theta_fo_2b_cut = theta_fo_2b; // * fo2_cut;
+theta_fo_2c_cut = theta_fo_2c; //* fo2_cut; 
+theta_fo_2d_cut = theta_fo_2d; // * fo2_cut; // * 0.96; // fo2_cut;
+theta_fo_2e_cut = theta_fo_2e; // * fo2_cut; // * 0.96; //fo2_cut;
+theta_fo_2f_cut = theta_fo_2f * 0.995; // * 0.74; //fo2_cut; 0.965
+
+phi_fo_2a = phi_foc(lambda_1, lambda_2, foc2_pos, freq_fo_2, theta_fo_2a);
+phi_fo_2b = phi_foc(lambda_2, lambda_3, foc2_pos, freq_fo_2, theta_fo_2b);
+phi_fo_2c = phi_foc(lambda_3, lambda_4, foc2_pos, freq_fo_2, theta_fo_2c); // + 0.5 * (theta_fo_2c - theta_fo_2c_cut);
+phi_fo_2d = phi_foc(lambda_4, lambda_5, foc2_pos, freq_fo_2, theta_fo_2d); // + 0.5 * (theta_fo_2d - theta_fo_2d_cut);
+phi_fo_2e = phi_foc(lambda_5, lambda_6, foc2_pos, freq_fo_2, theta_fo_2e); // + 0.5 * (theta_fo_2e - theta_fo_2e_cut);
+phi_fo_2f = phi_foc(lambda_6, lambda_7, foc2_pos, freq_fo_2, theta_fo_2f); // + 0.5 * (theta_fo_2f - theta_fo_2f_cut);
+phi_foc2_rotate = phi_fo_2f;
+if (chopper_mode >= 5)
+{
+    phi_fo_2a -= phi_foc2_rotate;
+    phi_fo_2b -= phi_foc2_rotate;
+    phi_fo_2c -= phi_foc2_rotate;
+    phi_fo_2d -= phi_foc2_rotate;
+    phi_fo_2e -= phi_foc2_rotate;
+    phi_fo_2f -= phi_foc2_rotate;
+};
+
+
+/* --- FO Chopper 3 --- */
+theta_fo_3a = theta_foc(lambda_1, lambda_2, foc3_pos, freq_fo_3);
+theta_fo_3b = theta_foc(lambda_2, lambda_3, foc3_pos, freq_fo_3);
+theta_fo_3c = theta_foc(lambda_3, lambda_4, foc3_pos, freq_fo_3);
+theta_fo_3d = theta_foc(lambda_4, lambda_5, foc3_pos, freq_fo_3);
+theta_fo_3e = theta_foc(lambda_5, lambda_6, foc3_pos, freq_fo_3);
+theta_fo_3f = theta_foc(lambda_6, lambda_7, foc3_pos, freq_fo_3);
+
+theta_fo_3a_cut = theta_fo_3a; // * fo3_cut;
+theta_fo_3b_cut = theta_fo_3b; // * fo3_cut;
+theta_fo_3c_cut = theta_fo_3c; // * fo3_cut;
+theta_fo_3d_cut = theta_fo_3d; // * fo3_cut;
+theta_fo_3e_cut = theta_fo_3e; // * fo3_cut;
+theta_fo_3f_cut = theta_fo_3f * 0.97; // 0.965; // * 0.94; //; 0.95
+
+phi_fo_3a = phi_foc(lambda_1, lambda_2, foc3_pos, freq_fo_3, theta_fo_3a);
+phi_fo_3b = phi_foc(lambda_2, lambda_3, foc3_pos, freq_fo_3, theta_fo_3b);
+phi_fo_3c = phi_foc(lambda_3, lambda_4, foc3_pos, freq_fo_3, theta_fo_3c);
+phi_fo_3d = phi_foc(lambda_4, lambda_5, foc3_pos, freq_fo_3, theta_fo_3d); // + 0.5 * (theta_fo_3d - theta_fo_3d_cut); 
+phi_fo_3e = phi_foc(lambda_5, lambda_6, foc3_pos, freq_fo_3, theta_fo_3e); // + 0.5 * (theta_fo_3e - theta_fo_3e_cut);
+phi_fo_3f = phi_foc(lambda_6, lambda_7, foc3_pos, freq_fo_3, theta_fo_3f) + 0.5 * (theta_fo_3f - theta_fo_3f_cut);
+phi_foc3_rotate = phi_fo_3a;
+if (chopper_mode >= 5)
+{
+    phi_fo_3a -= phi_foc3_rotate;
+    phi_fo_3b -= phi_foc3_rotate;
+    phi_fo_3c -= phi_foc3_rotate;
+    phi_fo_3d -= phi_foc3_rotate;
+    phi_fo_3e -= phi_foc3_rotate;
+    phi_fo_3f -= phi_foc3_rotate;
+};
+
+
+/* --- FO Chopper 4 --- */
+theta_fo_4a = theta_foc(lambda_1, lambda_2, foc4_pos, freq_fo_4);
+theta_fo_4b = theta_foc(lambda_2, lambda_3, foc4_pos, freq_fo_4);
+theta_fo_4c = theta_foc(lambda_3, lambda_4, foc4_pos, freq_fo_4);
+theta_fo_4d = theta_foc(lambda_4, lambda_5, foc4_pos, freq_fo_4);
+theta_fo_4e = theta_foc(lambda_5, lambda_6, foc4_pos, freq_fo_4);
+theta_fo_4f = theta_foc(lambda_6, lambda_7, foc4_pos, freq_fo_4);
+
+theta_fo_4a_cut = theta_fo_4a; // * fo4_cut;
+theta_fo_4b_cut = theta_fo_4b; // * fo4_cut;
+theta_fo_4c_cut = theta_fo_4c; // * fo4_cut;
+theta_fo_4d_cut = theta_fo_4d; // * 0.88/; // fo4_cut;
+theta_fo_4e_cut = theta_fo_4e; // * 0.99; //fo4_cut;
+theta_fo_4f_cut = theta_fo_4f * 0.985; // * 0.82; // 0.965
+
+phi_fo_4a = phi_foc(lambda_1, lambda_2, foc4_pos, freq_fo_4, theta_fo_4a);
+phi_fo_4b = phi_foc(lambda_2, lambda_3, foc4_pos, freq_fo_4, theta_fo_4b);
+phi_fo_4c = phi_foc(lambda_3, lambda_4, foc4_pos, freq_fo_4, theta_fo_4c);
+phi_fo_4d = phi_foc(lambda_4, lambda_5, foc4_pos, freq_fo_4, theta_fo_4d); // + 0.5 * (theta_fo_4d - theta_fo_4d_cut); 
+phi_fo_4e = phi_foc(lambda_5, lambda_6, foc4_pos, freq_fo_4, theta_fo_4e); // + 0.5 * (theta_fo_4e - theta_fo_4e_cut);
+phi_fo_4f = phi_foc(lambda_6, lambda_7, foc4_pos, freq_fo_4, theta_fo_4f) + 0.5 * (theta_fo_4f - theta_fo_4f_cut);
+phi_foc4_rotate = phi_fo_4a;
+if (chopper_mode >= 5)
+{
+    phi_fo_4a -= phi_foc4_rotate;
+    phi_fo_4b -= phi_foc4_rotate;
+    phi_fo_4c -= phi_foc4_rotate;
+    phi_fo_4d -= phi_foc4_rotate;
+    phi_fo_4e -= phi_foc4_rotate;
+    phi_fo_4f -= phi_foc4_rotate;
+};
+
+
+/* --- FO Chopper 5 --- */
+theta_fo_5a = theta_foc(lambda_1, lambda_2, foc5_pos, freq_fo_5);
+theta_fo_5b = theta_foc(lambda_2, lambda_3, foc5_pos, freq_fo_5);
+theta_fo_5c = theta_foc(lambda_3, lambda_4, foc5_pos, freq_fo_5);
+theta_fo_5d = theta_foc(lambda_4, lambda_5, foc5_pos, freq_fo_5); 
+theta_fo_5e = theta_foc(lambda_5, lambda_6, foc5_pos, freq_fo_5);
+theta_fo_5f = theta_foc(lambda_6, lambda_7, foc5_pos, freq_fo_5);
+
+theta_fo_5a_cut = theta_fo_5a; // * fo5_cut;
+theta_fo_5b_cut = theta_fo_5b; // * fo5_cut;
+theta_fo_5c_cut = theta_fo_5c; // * 0.98;
+theta_fo_5d_cut = theta_fo_5d * fo5_cut; // * 0.92;
+theta_fo_5e_cut = theta_fo_5e * fo5_cut; // * 0.95; //fo5_cut;
+theta_fo_5f_cut = theta_fo_5f * fo5_cut; //fo5_cut; 0.9
+
+phi_fo_5a = phi_foc(lambda_1, lambda_2, foc5_pos, freq_fo_5, theta_fo_5a);
+phi_fo_5b = phi_foc(lambda_2, lambda_3, foc5_pos, freq_fo_5, theta_fo_5b);
+phi_fo_5c = phi_foc(lambda_3, lambda_4, foc5_pos, freq_fo_5, theta_fo_5c); // - 0.5 * (theta_fo_5c - theta_fo_5c_cut); 
+phi_fo_5d = phi_foc(lambda_4, lambda_5, foc5_pos, freq_fo_5, theta_fo_5d) + 0.5 * (theta_fo_5d - theta_fo_5d_cut); 
+phi_fo_5e = phi_foc(lambda_5, lambda_6, foc5_pos, freq_fo_5, theta_fo_5e) + 0.5 * (theta_fo_5e - theta_fo_5e_cut); 
+phi_fo_5f = phi_foc(lambda_6, lambda_7, foc5_pos, freq_fo_5, theta_fo_5f) + 0.5 * (theta_fo_5f - theta_fo_5f_cut);
+phi_foc5_rotate = phi_fo_5a;
+if (chopper_mode >= 5)
+{
+    phi_fo_5a -= phi_foc5_rotate;
+    phi_fo_5b -= phi_foc5_rotate;
+    phi_fo_5c -= phi_foc5_rotate;
+    phi_fo_5d -= phi_foc5_rotate;
+    phi_fo_5e -= phi_foc5_rotate;
+    phi_fo_5f -= phi_foc5_rotate;
+};
+
+
+/* frame limiting times (us) at the detector */
+time_det_a1 = 1e6*(phi_foc(lambda_1, lambda_2, sample_pos, freq_source, theta_foc(lambda_1, lambda_2, sample_pos, freq_source)) - 0.5*theta_foc(lambda_1, lambda_2, sample_pos, freq_source)) / (2*PI*freq_source);
+time_det_a2 = 1e6*(phi_foc(lambda_1, lambda_2, sample_pos, freq_source, theta_foc(lambda_1, lambda_2, sample_pos, freq_source)) + 0.5*theta_foc(lambda_1, lambda_2, sample_pos, freq_source)) / (2*PI*freq_source);
+
+time_det_b1 = 1e6*(phi_foc(lambda_2, lambda_3, sample_pos, freq_source, theta_foc(lambda_2, lambda_3, sample_pos, freq_source)) - 0.5*theta_foc(lambda_2, lambda_3, sample_pos, freq_source)) / (2*PI*freq_source);
+time_det_b2 = 1e6*(phi_foc(lambda_2, lambda_3, sample_pos, freq_source, theta_foc(lambda_2, lambda_3, sample_pos, freq_source)) + 0.5*theta_foc(lambda_2, lambda_3, sample_pos, freq_source)) / (2*PI*freq_source);
+
+time_det_c1 = 1e6*(phi_foc(lambda_3, lambda_4, sample_pos, freq_source, theta_foc(lambda_3, lambda_4, sample_pos, freq_source)) - 0.5*theta_foc(lambda_3, lambda_4, sample_pos, freq_source)) / (2*PI*freq_source);
+time_det_c2 = 1e6*(phi_foc(lambda_3, lambda_4, sample_pos, freq_source, theta_foc(lambda_3, lambda_4, sample_pos, freq_source)) + 0.5*theta_foc(lambda_3, lambda_4, sample_pos, freq_source)) / (2*PI*freq_source);
+
+time_det_d1 = 1e6*(phi_foc(lambda_4, lambda_5, sample_pos, freq_source, theta_foc(lambda_4, lambda_5, sample_pos, freq_source)) - 0.5*theta_foc(lambda_4, lambda_5, sample_pos, freq_source)) / (2*PI*freq_source);
+time_det_d2 = 1e6*(phi_foc(lambda_4, lambda_5, sample_pos, freq_source, theta_foc(lambda_4, lambda_5, sample_pos, freq_source)) + 0.5*theta_foc(lambda_4, lambda_5, sample_pos, freq_source)) / (2*PI*freq_source);
+
+time_det_e1 = 1e6*(phi_foc(lambda_5, lambda_6, sample_pos, freq_source, theta_foc(lambda_5, lambda_6, sample_pos, freq_source)) - 0.5*theta_foc(lambda_5, lambda_6, sample_pos, freq_source)) / (2*PI*freq_source);
+time_det_e2 = 1e6*(phi_foc(lambda_5, lambda_6, sample_pos, freq_source, theta_foc(lambda_5, lambda_6, sample_pos, freq_source)) + 0.5*theta_foc(lambda_5, lambda_6, sample_pos, freq_source)) / (2*PI*freq_source);
+
+time_det_f1 = 1e6*(phi_foc(lambda_6, lambda_7, sample_pos, freq_source, theta_foc(lambda_6, lambda_7, sample_pos, freq_source)) - 0.5*theta_foc(lambda_6, lambda_7, sample_pos, freq_source)) / (2*PI*freq_source);
+time_det_f2 = 1e6*(phi_foc(lambda_6, lambda_7, sample_pos, freq_source, theta_foc(lambda_6, lambda_7, sample_pos, freq_source)) + 0.5*theta_foc(lambda_6, lambda_7, sample_pos, freq_source)) / (2*PI*freq_source);
+
+time_TLa0 = time_det_a1-0.15*(time_det_a2-time_det_a1);
+time_TLa1 = time_det_a2+0.15*(time_det_a2-time_det_a1);
+time_TLb0 = time_det_b1-0.15*(time_det_b2-time_det_b1);
+time_TLb1 = time_det_b2+0.15*(time_det_b2-time_det_b1);
+time_TLc0 = time_det_c1-0.15*(time_det_c2-time_det_c1);
+time_TLc1 = time_det_c2+0.15*(time_det_c2-time_det_c1);
+time_TLd0 = time_det_d1-0.15*(time_det_d2-time_det_d1);
+time_TLd1 = time_det_d2+0.15*(time_det_d2-time_det_d1);
+time_TLe0 = time_det_e1-0.15*(time_det_e2-time_det_e1);
+time_TLe1 = time_det_e2+0.15*(time_det_e2-time_det_e1);
+time_TLf0 = time_det_f1-0.15*(time_det_f2-time_det_f1);
+time_TLf1 = time_det_f2+0.15*(time_det_f2-time_det_f1);
+
+
+// ==============================================
+// 		print debug messages
+// ==============================================
+
+if (print_debug_msg == 2)
+{
+	printf("\n\n");
+	printf("----------------------------------------------------------------------------\n");
+	printf("\n");	
+	
+	printf("Wavelength Resolution:\n");	
+	printf("delta_lambda/lambda = delta_t/t = %.2f%%\n", (delta_wfmc*100/(sample_pos - z_wfmc)));
+	printf("\n");
+	
+	printf("Wavelength frames:\n");
+	printf("Frame 1 from %.2fA to %.2fA\n", lambda_1, lambda_2);
+	printf("Frame 2 from %.2fA to %.2fA\n", lambda_2, lambda_3);
+	printf("Frame 3 from %.2fA to %.2fA\n", lambda_3, lambda_4);
+	printf("Frame 4 from %.2fA to %.2fA\n", lambda_4, lambda_5);
+	printf("Frame 5 from %.2fA to %.2fA\n", lambda_5, lambda_6);
+	printf("Frame 6 from %.2fA to %.2fA\n", lambda_6, lambda_7);
+	printf("\n");
+
+    printf("Real Chopper distances:\n");
+    printf("z_wfmc_1 = %.3f m\n", z_wfmc_1);
+    printf("z_wfmc_2 = %.3f m\n", z_wfmc_2);
+    printf("foc1_pos = %.3f m\n", foc1_pos);
+    printf("z_bp   = %.3f m\n", bp_pos);
+    printf("T0_pos   = %.3f m\n", T0_pos);
+    printf("foc2_pos = %.3f m\n", foc2_pos);
+    printf("foc3_pos = %.3f m\n", foc3_pos);
+    printf("foc4_pos = %.3f m\n", foc4_pos);
+    printf("foc5_pos = %.3f m\n", foc5_pos);
+    printf("\n");	
+/*	
+    printf("Chopper distances used for calculations:\n");
+    printf("z_wfmc_1 = %.3f m\n", z_wfmc_1);
+    printf("z_wfmc_2 = %.3f m\n", z_wfmc_2);
+    printf("foc1_pos = %.3f m\n", foc1_pos_calc);
+    printf("z_bp   = %.3f m\n", bp_pos_calc);    
+	printf("foc2_pos = %.3f m\n", foc2_pos_calc);
+    printf("foc3_pos = %.3f m\n", foc3_pos_calc);
+    printf("foc4_pos = %.3f m\n", foc4_pos_calc);
+    printf("\n");*/
+
+	printf("Chopper frequencies:\n");
+	printf("WFM Chopper frequency = %.1f Hz\n", freq_wfmc);
+	printf("FO Chopper 1 frequency = %.1f Hz\n", freq_fo_1);
+	printf("BP1 Chopper frequency = %.1f Hz\n", freq_bp1);
+	printf("BP Chopper frequency = %.1f Hz\n", freq_bp);
+	printf("T0 Chopper frequency = %.1f Hz\n", freq_t0);
+	printf("FO Chopper 2 frequency = %.1f Hz\n", freq_fo_2);
+	printf("FO Chopper 3 frequency = %.1f Hz\n", freq_fo_3);
+	printf("FO Chopper 4 frequency = %.1f Hz\n", freq_fo_4);
+	printf("FO Chopper 5 frequency = %.1f Hz\n", freq_fo_5);
+
+
+	printf("\n");
+	printf("Chopper radius:\n");
+	printf("WFM Chopper radius = %.2f m\n", radius_wfmc);
+	printf("FO Chopper 1 radius = %.2f m\n", radius_foc1);
+	printf("T0 Chopper radius = %.2f m\n", radius_t0);
+	printf("T0 length = %.2f m\n", t0_length);
+	printf("FO Chopper 2 radius = %.2f m\n", radius_foc2);
+	printf("FO Chopper 3 radius = %.2f m\n", radius_foc3);
+	printf("FO Chopper 4 radius = %.2f m\n", radius_foc4);
+	printf("FO Chopper 5 radius = %.2f m\n", radius_foc5);
+
+
+	printf("\n");
+	printf("WFM Chopper 1 phases:\n");
+	printf("phi_a = %2.3f ms / %3.2f deg\n", phi_1a/(2*PI*freq_wfmc)*1e3, phi_1a*RAD2DEG);
+	printf("phi_b = %2.3f ms / %3.2f deg\n", phi_1b/(2*PI*freq_wfmc)*1e3, phi_1b*RAD2DEG);
+	printf("phi_c = %2.3f ms / %3.2f deg\n", phi_1c/(2*PI*freq_wfmc)*1e3, phi_1c*RAD2DEG);
+	printf("phi_d = %2.3f ms / %3.2f deg\n", phi_1d/(2*PI*freq_wfmc)*1e3, phi_1d*RAD2DEG);
+	printf("phi_e = %2.3f ms / %3.2f deg\n", phi_1e/(2*PI*freq_wfmc)*1e3, phi_1e*RAD2DEG);
+	printf("phi_f = %2.3f ms / %3.2f deg\n", phi_1f/(2*PI*freq_wfmc)*1e3, phi_1f*RAD2DEG);
+	printf("phi_f_cut = %2.3f ms / %3.2f deg\n", phi_1f_cut/(2*PI*freq_wfmc)*1e3, phi_1f_cut*RAD2DEG);
+
+
+	printf("\n");
+	printf("WFM Chopper 2 phases:\n");
+	printf("phi_a = %2.3f ms / %3.2f deg\n", phi_2a/(2*PI*freq_wfmc)*1e3, phi_2a*RAD2DEG);
+	printf("phi_b = %2.3f ms / %3.2f deg\n", phi_2b/(2*PI*freq_wfmc)*1e3, phi_2b*RAD2DEG);
+	printf("phi_c = %2.3f ms / %3.2f deg\n", phi_2c/(2*PI*freq_wfmc)*1e3, phi_2c*RAD2DEG);
+	printf("phi_d = %2.3f ms / %3.2f deg\n", phi_2d/(2*PI*freq_wfmc)*1e3, phi_2d*RAD2DEG);
+	printf("phi_e = %2.3f ms / %3.2f deg\n", phi_2e/(2*PI*freq_wfmc)*1e3, phi_2e*RAD2DEG);
+	printf("phi_f = %2.3f ms / %3.2f deg\n", phi_2f/(2*PI*freq_wfmc)*1e3, phi_2f*RAD2DEG);
+
+
+	printf("\n");
+	printf("WFM Chopper openings:\n");
+	printf("theta_a = %4.2f us / %2.1f deg \n", delta_t_a*1e6, theta_a*RAD2DEG);
+	printf("theta_b = %4.2f us / %2.1f deg \n", delta_t_b*1e6, theta_b*RAD2DEG);
+	printf("theta_c = %4.2f us / %2.1f deg \n", delta_t_c*1e6, theta_c*RAD2DEG);
+	printf("theta_d = %4.2f us / %2.1f deg \n", delta_t_d*1e6, theta_d*RAD2DEG);
+	printf("theta_e = %4.2f us / %2.1f deg \n", delta_t_e*1e6, theta_e*RAD2DEG);
+	printf("theta_f1 = %4.2f us / %2.1f deg \n", delta_t_f_cut*1e6, theta_f_cut*RAD2DEG);
+	printf("theta_f2 = %4.2f us / %2.1f deg \n", delta_t_f*1e6, theta_f*RAD2DEG);
+	
+	printf("\n");
+	printf("T0 and BP angles:\n");
+	printf("theta_bp1 = %2.5f deg\n", theta_bp1*RAD2DEG);
+	printf("phi_bp1 = %2.5f deg\n", phi_bp1*RAD2DEG);
+	printf("bp1_correction   = %2.5f deg (one edge only)\n", bp1_correction*RAD2DEG);
+	printf("theta_bp = %2.5f deg\n", theta_bp*RAD2DEG);
+	printf("phi_bp = %2.5f deg\n", phi_bp*RAD2DEG);
+	printf("bp_correction   = %2.5f deg (one edge only)\n", bp_correction*RAD2DEG);
+	printf("theta_tmin = %2.5f deg\n", theta_t0*RAD2DEG);
+	printf("phi_tmin = %2.5f deg\n", phi_t0*RAD2DEG);
+
+	printf("\n");
+	printf("FO Chopper 1 phases:\n");
+	printf("phi_a = %2.5f ms / %3.5f deg\n", phi_fo_1a/(2*PI*freq_fo_1)*1e3, phi_fo_1a*RAD2DEG);
+	printf("phi_b = %2.5f ms / %3.5f deg\n", phi_fo_1b/(2*PI*freq_fo_1)*1e3, phi_fo_1b*RAD2DEG);
+	printf("phi_c = %2.5f ms / %3.5f deg\n", phi_fo_1c/(2*PI*freq_fo_1)*1e3, phi_fo_1c*RAD2DEG);
+	printf("phi_d = %2.5f ms / %3.5f deg\n", phi_fo_1d/(2*PI*freq_fo_1)*1e3, phi_fo_1d*RAD2DEG);
+	printf("phi_e = %2.5f ms / %3.5f deg\n", phi_fo_1e/(2*PI*freq_fo_1)*1e3, phi_fo_1e*RAD2DEG);
+	printf("phi_f = %2.5f ms / %3.5f deg\n", phi_fo_1f/(2*PI*freq_fo_1)*1e3, phi_fo_1f*RAD2DEG);
+
+	printf("\n");
+	printf("FO Chopper 1 openings:\n");
+	printf("theta_a = %2.5f deg\n", theta_fo_1a_cut*RAD2DEG);
+	printf("theta_b = %2.5f deg\n", theta_fo_1b_cut*RAD2DEG);
+	printf("theta_c = %2.5f deg\n", theta_fo_1c_cut*RAD2DEG);
+	printf("theta_d = %2.5f deg\n", theta_fo_1d_cut*RAD2DEG);
+	printf("theta_e = %2.5f deg\n", theta_fo_1e_cut*RAD2DEG);
+	printf("theta_f = %2.5f deg\n", theta_fo_1f_cut*RAD2DEG);
+
+	printf("\n");
+	printf("FO Chopper 2 phases:\n");
+	printf("phi_a = %2.5f ms / %3.5f deg\n", phi_fo_2a/(2*PI*freq_fo_2)*1e3, phi_fo_2a*RAD2DEG);
+	printf("phi_b = %2.5f ms / %3.5f deg\n", phi_fo_2b/(2*PI*freq_fo_2)*1e3, phi_fo_2b*RAD2DEG);
+	printf("phi_c = %2.5f ms / %3.5f deg\n", phi_fo_2c/(2*PI*freq_fo_2)*1e3, phi_fo_2c*RAD2DEG);
+	printf("phi_d = %2.5f ms / %3.5f deg\n", phi_fo_2d/(2*PI*freq_fo_2)*1e3, phi_fo_2d*RAD2DEG);
+	printf("phi_e = %2.5f ms / %3.5f deg\n", phi_fo_2e/(2*PI*freq_fo_2)*1e3, phi_fo_2e*RAD2DEG);
+	printf("phi_f = %2.5f ms / %3.5f deg\n", phi_fo_2f/(2*PI*freq_fo_2)*1e3, phi_fo_2f*RAD2DEG);
+
+	printf("\n");
+	printf("FO Chopper 2 openings:\n");
+	printf("theta_a = %2.5f deg\n", theta_fo_2a_cut*RAD2DEG);
+	printf("theta_b = %2.5f deg\n", theta_fo_2b_cut*RAD2DEG);
+	printf("theta_c = %2.5f deg\n", theta_fo_2c_cut*RAD2DEG);
+	printf("theta_d = %2.5f deg\n", theta_fo_2d_cut*RAD2DEG);
+	printf("theta_e = %2.5f deg\n", theta_fo_2e_cut*RAD2DEG);
+	printf("theta_f = %2.5f deg\n", theta_fo_2f_cut*RAD2DEG);
+	
+	printf("\n");
+	printf("FO Chopper 3 phases:\n");
+	printf("phi_a = %2.5f ms / %3.5f deg\n", phi_fo_3a/(2*PI*freq_fo_3)*1e3, phi_fo_3a*RAD2DEG);
+	printf("phi_b = %2.5f ms / %3.5f deg\n", phi_fo_3b/(2*PI*freq_fo_3)*1e3, phi_fo_3b*RAD2DEG);
+	printf("phi_c = %2.5f ms / %3.5f deg\n", phi_fo_3c/(2*PI*freq_fo_3)*1e3, phi_fo_3c*RAD2DEG);
+	printf("phi_d = %2.5f ms / %3.5f deg\n", phi_fo_3d/(2*PI*freq_fo_3)*1e3, phi_fo_3d*RAD2DEG);
+	printf("phi_e = %2.5f ms / %3.5f deg\n", phi_fo_3e/(2*PI*freq_fo_3)*1e3, phi_fo_3e*RAD2DEG);
+	printf("phi_f = %2.5f ms / %3.5f deg\n", phi_fo_3f/(2*PI*freq_fo_3)*1e3, phi_fo_3f*RAD2DEG);
+
+	printf("\n");
+	printf("FO Chopper 3 openings:\n");
+	printf("theta_a = %2.5f deg\n", theta_fo_3a_cut*RAD2DEG);
+	printf("theta_b = %2.5f deg\n", theta_fo_3b_cut*RAD2DEG);
+	printf("theta_c = %2.5f deg\n", theta_fo_3c_cut*RAD2DEG);
+	printf("theta_d = %2.5f deg\n", theta_fo_3d_cut*RAD2DEG);
+	printf("theta_e = %2.5f deg\n", theta_fo_3e_cut*RAD2DEG);
+	printf("theta_f = %2.5f deg\n", theta_fo_3f_cut*RAD2DEG);
+
+	printf("\n");
+	printf("FO Chopper 4 phases:\n");
+	printf("phi_a = %2.5f ms / %3.5f deg\n", phi_fo_4a/(2*PI*freq_fo_4)*1e3, phi_fo_4a*RAD2DEG);
+	printf("phi_b = %2.5f ms / %3.5f deg\n", phi_fo_4b/(2*PI*freq_fo_4)*1e3, phi_fo_4b*RAD2DEG);
+	printf("phi_c = %2.5f ms / %3.5f deg\n", phi_fo_4c/(2*PI*freq_fo_4)*1e3, phi_fo_4c*RAD2DEG);
+	printf("phi_d = %2.5f ms / %3.5f deg\n", phi_fo_4d/(2*PI*freq_fo_4)*1e3, phi_fo_4d*RAD2DEG);
+	printf("phi_e = %2.5f ms / %3.5f deg\n", phi_fo_4e/(2*PI*freq_fo_4)*1e3, phi_fo_4e*RAD2DEG);
+	printf("phi_f = %2.5f ms / %3.5f deg\n", phi_fo_4f/(2*PI*freq_fo_4)*1e3, phi_fo_4f*RAD2DEG);
+
+	printf("\n");
+	printf("FO Chopper 4 openings:\n");
+	printf("theta_a = %2.5f deg\n", theta_fo_4a_cut*RAD2DEG);
+	printf("theta_b = %2.5f deg\n", theta_fo_4b_cut*RAD2DEG);
+	printf("theta_c = %2.5f deg\n", theta_fo_4c_cut*RAD2DEG);
+	printf("theta_d = %2.5f deg\n", theta_fo_4d_cut*RAD2DEG);
+	printf("theta_e = %2.5f deg\n", theta_fo_4e_cut*RAD2DEG);
+	printf("theta_f = %2.5f deg\n", theta_fo_4f_cut*RAD2DEG);
+
+	printf("\n");
+	printf("FO Chopper 5 phases:\n");
+	printf("phi_a = %2.5f ms / %3.5f deg\n", phi_fo_5a/(2*PI*freq_fo_5)*1e3, phi_fo_5a*RAD2DEG);
+	printf("phi_b = %2.5f ms / %3.5f deg\n", phi_fo_5b/(2*PI*freq_fo_5)*1e3, phi_fo_5b*RAD2DEG);
+	printf("phi_c = %2.5f ms / %3.5f deg\n", phi_fo_5c/(2*PI*freq_fo_5)*1e3, phi_fo_5c*RAD2DEG);
+	printf("phi_d = %2.5f ms / %3.5f deg\n", phi_fo_5d/(2*PI*freq_fo_5)*1e3, phi_fo_5d*RAD2DEG);
+	printf("phi_e = %2.5f ms / %3.5f deg\n", phi_fo_5e/(2*PI*freq_fo_5)*1e3, phi_fo_5e*RAD2DEG);
+	printf("phi_f = %2.5f ms / %3.5f deg\n", phi_fo_5f/(2*PI*freq_fo_5)*1e3, phi_fo_5f*RAD2DEG);
+
+	printf("\n");
+	printf("FO Chopper 5 openings:\n");
+	printf("theta_a = %2.5f deg\n", theta_fo_5a_cut*RAD2DEG);
+	printf("theta_b = %2.5f deg\n", theta_fo_5b_cut*RAD2DEG);
+	printf("theta_c = %2.5f deg\n", theta_fo_5c_cut*RAD2DEG);
+	printf("theta_d = %2.5f deg\n", theta_fo_5d_cut*RAD2DEG);
+	printf("theta_e = %2.5f deg\n", theta_fo_5e_cut*RAD2DEG);
+	printf("theta_f = %2.5f deg\n", theta_fo_5f_cut*RAD2DEG);
+	
+	printf("\n");
+	printf("frame limiting times (ms) at the detector\n");
+	printf("time_det_a1 = %3.1f ms\n", time_det_a1*1e-3);
+	printf("time_det_a2 = %3.1f ms\n", time_det_a2*1e-3);
+	printf("time_det_b1 = %3.1f ms\n", time_det_b1*1e-3);
+	printf("time_det_b2 = %3.1f ms\n", time_det_b2*1e-3);
+	printf("time_det_c1 = %3.1f ms\n", time_det_c1*1e-3);
+	printf("time_det_c2 = %3.1f ms\n", time_det_c2*1e-3);
+	printf("time_det_d1 = %3.1f ms\n", time_det_d1*1e-3);
+	printf("time_det_d2 = %3.1f ms\n", time_det_d2*1e-3);
+	printf("time_det_e1 = %3.1f ms\n", time_det_e1*1e-3);
+	printf("time_det_e2 = %3.1f ms\n", time_det_e2*1e-3);
+	printf("time_det_f1 = %3.1f ms\n", time_det_f1*1e-3);
+	printf("time_det_f2 = %3.1f ms\n", time_det_f2*1e-3);
+    printf("\n");
+
+
+    if (chopper_mode > 4)
+    {
+	    printf("Warning: 'Chopper Zero Mode' changes FO chopper geometries!\n\n");
+    }
+
+    printf("----------------------------------------------------------------------------");
+    printf("\n\n\n");
+	
+ }
+	
+if (print_debug_msg == 3)
+{
+
+	printf("\n\n");
+	printf("----------------------------------------------------------------------------\n");
+	printf("\n");	
+	
+	/*	printf("\n");
+	printf("Big guide size\n");
+	printf("vertical:   %2.2f cm\n", g5_size_v*100);
+	printf("horizontal: %2.2f cm\n", g5_size_h*100);
+	printf("\n");
+	printf("Guide 1 vertical:   %2.2f cm\n", g1_size_v*100);
+	printf("Guide 1 horizontal: %2.2f cm\n", g1_size_h*100);
+	printf("Guide 2 vertical:   %2.2f cm\n", g2_size_v*100);
+	printf("Guide 2 horizontal: %2.2f cm\n", g2_size_h*100);
+	printf("Guide 3 vertical:   %2.2f cm\n", g2d_open_y*100);
+	printf("Guide 3 horizontal: %2.2f cm\n", g2d_open_x*100);
+	printf("Guide 4 vertical:   %2.2f cm\n", g4_size_v*100);
+	printf("Guide 4 horizontal: %2.2f cm\n", g4_size_h*100);
+	printf("Guide 5 vertical:   %2.2f cm\n", g5_size_v*100);
+	printf("Guide 5 horizontal: %2.2f cm\n", g5_size_h*100);
+	printf("Guide 6 vertical:   %2.2f cm\n", g6_size_v*100);
+	printf("Guide 6 horizontal: %2.2f cm\n", g6_size_h*100);
+	printf("Guide 7 vertical:   %2.2f cm\n", g7_size_v*100);
+	printf("Guide 7 horizontal: %2.2f cm\n", g7_size_h*100);
+	printf("Guide 8 vertical:   %2.2f cm\n", g8_size_v*100);
+	printf("Guide 8 horizontal: %2.2f cm\n", g8_size_h*100);
+	printf("Guide 9 vertical:   %2.2f cm\n", g9_size_v*100);
+	printf("Guide 9 horizontal: %2.2f cm\n", g9_size_h*100);
+	printf("\n\n");*/
+
+	// PSI guide dimensions
+
+printf("*******  HORIZONTAL GUIDES PARAMETERS ***************\n\n");
+
+printf("Guide 1a (bi-spectral extraction system)\n");
+printf("a = %f , b = % f , f = %f \n",ax1a,bx1a,fx1a);
+printf("Start at: %f , length = %f \n",g1a_start,g1a_length);
+printf("f_in = %f , f_out = %f \n",g1a_focus_in_x,g1a_focus_out_x);
+printf("Opening = %f\n\n",g1a_open_x);
+
+printf("Guide 1b (in light shutter)\n");
+printf("a = %f , b = % f , f = %f \n",ax1b,bx1b,fx1b);
+printf("Start at: %f , length = %f \n",g1b_start,g1b_length);
+printf("f_in = %f , f_out = %f \n",g1b_focus_in_x,g1b_focus_out_x);
+printf("Opening = %f\n\n",g1b_open_x);
+/*
+printf("Guide 1c (outside monolith)\n");
+printf("a = %f , b = % f , f = %f \n",ax1c,bx1c,fx1c);
+printf("Start at: %f , length = %f \n",g1c_start,g1c_length);
+printf("f_in = %f , f_out = %f \n",g1c_focus_in_x,g1c_focus_out_x);
+printf("Opening = %f\n\n",g1c_open_x);
+
+printf("Guide 2a (elliptical) \n");
+printf("a = %f , b = % f , f = %f \n",ax2a,bx2a,fx2a);
+printf("Start at: %f , length = %f \n",g2a_start,g2a_length);
+printf("f_in = %f , f_out = %f \n",g2a_focus_in_x,g2a_focus_out_x);
+printf("Opening = %f\n\n",g2a_open_x);
+
+printf("Guide 2b (elliptical) \n");
+printf("a = %f , b = % f , f = %f \n",ax2b,bx2b,fx2b);
+printf("Start at: %f , length = %f \n",g2b_start,g2b_length);
+printf("f_in = %f , f_out = %f \n",g2b_focus_in_x,g2b_focus_out_x);
+printf("Opening = %f\n\n",g2b_open_x);
+
+printf("Guide 2c (elliptical) \n");
+printf("a = %f , b = % f , f = %f \n",ax2c,bx2c,fx2c);
+printf("Start at: %f , length = %f \n",g2c_start,g2c_length);
+printf("f_in = %f , f_out = %f \n",g2c_focus_in_x,g2c_focus_out_x);
+printf("Opening = %f\n\n",g2c_open_x);
+
+printf("Guide 2d (elliptical) \n");
+printf("a = %f , b = % f , f = %f \n",ax2d,bx2d,fx2d);
+printf("Start at: %f , length = %f \n",g2d_start,g2d_length);
+printf("f_in = %f , f_out = %f \n",g2d_focus_in_x,g2d_focus_out_x);
+printf("Opening = %f\n\n",g2d_open_x);
+
+printf("Guide 3a (straight) \n");
+printf("Start at: %f , length = %f \n",g3a_start,g3a_length);
+printf("Opening = %f\n\n",g3a_open_x);
+
+printf("Guide 3b (straight) \n");
+printf("Start at: %f , length = %f \n",g3b_start,g3b_length);
+printf("Opening = %f\n\n",g3b_open_x);
+
+printf("Guide 4a (straight) \n");
+printf("Start at: %f , length = %f \n",g4a_start,g4a_length);
+printf("Opening = %f\n\n",g4a_open_x);
+
+printf("Guide 4b (straight) \n");
+printf("Start at: %f , length = %f \n",g4b_start,g4b_length);
+printf("Opening = %f\n\n",g4b_open_x);
+
+printf("Guide 5a (straight) \n");
+printf("Start at: %f , length = %f \n",g5a_start,g5a_length);
+printf("Opening = %f\n\n",g5a_open_x);
+
+printf("Guide 5b (straight) \n");
+printf("Start at: %f , length = %f \n",g5b_start,g5b_length);
+printf("Opening = %f\n\n",g5b_open_x);
+
+printf("Guide 6 (elliptical) \n");
+printf("a = %f , b = % f , f = %f \n",ax6,bx6,fx6);
+printf("Start at: %f , length = %f \n",g6_start,g6_length);
+printf("f_in = %f , f_out = %f \n",g6_focus_in_x,g6_focus_out_x);
+printf("Opening = %f\n\n",g6_open_x);
+*/
+printf("*******  VERTICAL GUIDES PARAMETERS ***************\n\n");
+
+printf("Guide 1a (bi-spectral extraction system)\n");
+printf("a = %f , b = % f , f = %f \n",ay1a,by1a,fy1a);
+printf("Start at: %f , length = %f \n",g1a_start,g1a_length);
+printf("f_in = %f , f_out = %f \n",g1a_focus_in_y,g1a_focus_out_y);
+printf("Opening = %f\n\n",g1a_open_y);
+
+printf("Guide 1b (in light shutter)\n");
+printf("a = %f , b = % f , f = %f \n",ay1b,by1b,fy1b);
+printf("Start at: %f , length = %f \n",g1b_start,g1b_length);
+printf("f_in = %f , f_out = %f \n",g1b_focus_in_y,g1b_focus_out_y);
+printf("Opening = %f\n\n",g1b_open_y);
+/*
+printf("Guide 1c (outside monolith)\n");
+printf("a = %f , b = % f , f = %f \n",ay1c,by1c,fy1c);
+printf("Start at: %f , length = %f \n",g1c_start,g1c_length);
+printf("f_in = %f , f_out = %f \n",g1c_focus_in_y,g1c_focus_out_y);
+printf("Opening = %f\n\n",g1c_open_y);
+
+printf("Guide 2a (elliptical) \n");
+printf("a = %f , b = % f , f = %f \n",ay2a,by2a,fy2a);
+printf("Start at: %f , length = %f \n",g2a_start,g2a_length);
+printf("f_in = %f , f_out = %f \n",g2a_focus_in_y,g2a_focus_out_y);
+printf("Opening = %f\n\n",g2a_open_y);
+
+printf("Guide 2b (elliptical) \n");
+printf("a = %f , b = % f , f = %f \n",ay2b,by2b,fy2b);
+printf("Start at: %f , length = %f \n",g2b_start,g2b_length);
+printf("f_in = %f , f_out = %f \n",g2b_focus_in_y,g2b_focus_out_y);
+printf("Opening = %f\n\n",g2b_open_y);
+
+printf("Guide 2c (elliptical) \n");
+printf("a = %f , b = % f , f = %f \n",ay2c,by2c,fy2c);
+printf("Start at: %f , length = %f \n",g2c_start,g2c_length);
+printf("f_in = %f , f_out = %f \n",g2c_focus_in_y,g2c_focus_out_y);
+printf("Opening = %f\n\n",g2c_open_y);
+
+printf("Guide 2d (elliptical) \n");
+printf("a = %f , b = % f , f = %f \n",ay2d,by2d,fy2d);
+printf("Start at: %f , length = %f \n",g2d_start,g2d_length);
+printf("f_in = %f , f_out = %f \n",g2d_focus_in_y,g2d_focus_out_y);
+printf("Opening = %f\n\n",g2d_open_y);
+
+printf("Guide 3a (elliptical) \n");
+printf("a = %f , b = % f , f = %f \n",ay3a,by3a,fy3a);
+printf("Start at: %f , length = %f \n",g3a_start,g3a_length);
+printf("f_in = %f , f_out = %f \n",g3a_focus_in_y,g3a_focus_out_y);
+printf("Opening = %f\n\n",g3a_open_y);
+
+printf("Guide 3b (elliptical) \n");
+printf("a = %f , b = % f , f = %f \n",ay3b,by3b,fy3b);
+printf("Start at: %f , length = %f \n",g3b_start,g3b_length);
+printf("f_in = %f , f_out = %f \n",g3b_focus_in_y,g3b_focus_out_y);
+printf("Opening = %f\n\n",g3b_open_y);
+
+printf("Guide 4a (straight) \n");
+printf("Start at: %f , length = %f \n",g4a_start,g4a_length);
+printf("Opening = %f\n\n",g4a_open_y);
+
+printf("Guide 4b (straight) \n");
+printf("Start at: %f , length = %f \n",g4b_start,g4b_length);
+printf("Opening = %f\n\n",g4b_open_y);
+
+printf("Guide 5a (elliptical) \n");
+printf("a = %f , b = % f , f = %f \n",ay5a,by5a,fy5a);
+printf("Start at: %f , length = %f \n",g5a_start,g5a_length);
+printf("f_in = %f , f_out = %f \n",g5a_focus_in_y,g5a_focus_out_y);
+printf("Opening = %f\n\n",g5a_open_y);
+
+printf("Guide 5b (elliptical) \n");
+printf("a = %f , b = % f , f = %f \n",ay5b,by5b,fy5b);
+printf("Start at: %f , length = %f \n",g5b_start,g5b_length);
+printf("f_in = %f , f_out = %f \n",g5b_focus_in_y,g5b_focus_out_y);
+printf("Opening = %f\n\n",g5b_open_y);
+
+printf("Guide 6 (elliptical) \n");
+printf("a = %f , b = % f , f = %f \n",ay6,by6,fy6);
+printf("Start at: %f , length = %f \n",g6_start,g6_length);
+printf("f_in = %f , f_out = %f \n",g6_focus_in_y,g6_focus_out_y);
+printf("Opening = %f\n\n",g6_open_y);
+*/
+ }
+
+
+    // ============================================================
+
+
+
+
+ %}
+
+// End of INITIALIZE
+
+
+// ==============================================
+// 
+// 		TRACE SECTION
+// 
+// ==============================================
+
+TRACE
+
+// ==============================================
+// 		 Source 
+// ==============================================
+COMPONENT Origin = Progress_bar()
+  AT (0,0,0) ABSOLUTE
+
+
+COMPONENT Source = ESS_butterfly(sector="S",beamline=2,Lmin=l_min,Lmax=l_max,n_pulses=num_pulses,c_performance=1,t_performance=1,target_index=+1,
+				cold_frac=cold_frac, yheight=0.03, focus_xw=1.3*g1a_open_x, focus_yh=1.3*g1a_open_y, acc_power=5)//,tfocus_dist=sample_pos,tfocus_time=80,tfocus_width=60)
+AT (0,0,0) RELATIVE Origin
+EXTEND %{
+    frame_passed=0;
+    false_frame=0;
+    pass_chopper=no_choppers;
+    n_count=0;
+    fo_false=0;
+    if (t < 1/freq_source) n_pulse = 1;
+    if (t >= 1/freq_source && t < 2/freq_source) n_pulse = 2;
+    if (t >= 2/freq_source && t < 3/freq_source) n_pulse = 3;
+    if (t >= 3/freq_source && t < 4/freq_source) n_pulse = 4;
+%}
+
+
+// ===============================================================
+// 		Guide g1a: Extraction system
+// =============================================================== 
+
+COMPONENT Start_of_g1 = Arm() 
+AT (position,0,g1a_start-2*u) RELATIVE Origin 
+ROTATED (0,view_angle,0) RELATIVE Origin 
+
+
+/*COMPONENT lambda_entrance = L_monitor(   
+nL = 100, filename = "lambda_entrance.dat", xwidth = g1a_open_x,   
+yheight = g1a_open_y, Lmin = 0, Lmax = 10)   
+AT (0, 0, u) RELATIVE PREVIOUS  */ 
+
+COMPONENT g1a = bi_spec_ellipse( 
+xheight = stack_x, ywidth = stack_y, 
+zlength = stack_length, n_mirror = stack_n_mirrors, tilt = stack_tilt, n_pieces = stack_n_pieces, 
+angular_offset = stack_angular_offset,substrate = 0,cut = 3,m = stack_m, 
+ell_l=g1a_length, d_focus_1_x=g1a_focus_in_x, d_focus_1_y=g1a_focus_in_y, d_focus_2_x=g1a_focus_out_x, d_focus_2_y=g1a_focus_out_y, 
+ell_h = g1a_open_x, ell_w = g1a_open_y, 
+R0=0.99, Qc=0.0217, alpha_mirror=6.07, ell_m=g1a_m, W=0.003) 
+AT (0,0, u) RELATIVE PREVIOUS 
+ROTATED (0,0,180) RELATIVE PREVIOUS 
+EXTEND 
+ %{
+	if(SCATTERED) n_count=n_count+1;
+ %}
+
+
+COMPONENT End_of_g1a= Arm() 
+AT (0,0,g1a_length) RELATIVE PREVIOUS 
+ROTATED (0,0,-180) RELATIVE PREVIOUS 
+
+// ===============================================================
+// 		Guide g1b: Light shutter
+// =============================================================== 
+
+COMPONENT Start_of_g1b = Arm() 
+AT (0,0,light_shutter_gap) RELATIVE PREVIOUS 
+
+COMPONENT g1b = Guide_four_side(
+    w1l = g1b_open_x/2, linwl = g1b_focus_in_x,
+    loutwl = g1b_focus_out_x, w1r = g1b_open_x/2,
+    linwr = g1b_focus_in_x, loutwr = g1b_focus_out_x,
+    h1u = g1b_open_y/2, linhu = g1b_focus_in_y,
+    louthu = g1b_focus_out_y, h1d = g1b_open_y/2,
+    linhd = g1b_focus_in_y, louthd = g1b_focus_out_y,
+    l = g1b_length, mxr = g1b_m, mxl = g1b_m, myu = g1b_m,
+    myd = g1b_m)
+  AT (0, 0, u) RELATIVE PREVIOUS
+  ROTATED (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT End_of_g1b= Arm() 
+AT (0,0,g1b_length) RELATIVE PREVIOUS 
+ROTATED (0,0,0) RELATIVE PREVIOUS 
+
+// ===============================================================
+// 		Guide g1c: Light shutter to WFMC1
+// ===============================================================
+
+COMPONENT Start_of_g1c = Arm() 
+AT (0,0,light_shutter_gap) RELATIVE PREVIOUS 
+
+COMPONENT g1c = Guide_four_side(
+    w1l = g1c_open_x/2, linwl = g1c_focus_in_x,
+    loutwl = g1c_focus_out_x, w1r = g1c_open_x/2,
+    linwr = g1c_focus_in_x, loutwr = g1c_focus_out_x,
+    h1u = g1c_open_y/2, linhu = g1c_focus_in_y,
+    louthu = g1c_focus_out_y, h1d = g1c_open_y/2,
+    linhd = g1c_focus_in_y, louthd = g1c_focus_out_y,
+    l = g1c_length, mxr = g1c_m, mxl = g1c_m, myu = g1c_m,
+    myd = g1c_m)
+  AT (0, 0, u) RELATIVE PREVIOUS
+  ROTATED (0, 0, 0) RELATIVE PREVIOUS
+EXTEND 
+ %{
+	if(SCATTERED) n_count=n_count+1;
+ %}
+
+
+COMPONENT End_of_g1c= Arm() 
+AT (0,0,g1c_length) RELATIVE PREVIOUS 
+ROTATED (0,0,0) RELATIVE PREVIOUS 
+
+// ===============================================================
+// 		              WFMC1
+// ===============================================================
+
+COMPONENT wfmc_1a = DiskChopper(
+    theta_0 = theta_a*RAD2DEG, radius = radius_wfmc, yheight = window_height_wfmc, nu = actual_wfmc_1, nslit = 1,
+    phase = phi_1a*RAD2DEG)
+  WHEN (pass_chopper==0 && wfmc1_fail==0)
+  AT (0, 0, 0.45-delta_wfmc/2+u) RELATIVE PREVIOUS // changed from 0.5-delta....
+  GROUP WFMC_1
+EXTEND 
+ %{
+	if(SCATTERED) frame_passed=1;
+ %}
+
+COMPONENT wfmc_1b = DiskChopper(
+    theta_0 = theta_b*RAD2DEG, radius = radius_wfmc, yheight = window_height_wfmc, nu = actual_wfmc_1, nslit = 1,
+    phase = phi_1b*RAD2DEG)
+  WHEN (pass_chopper==0 && wfmc1_fail==0)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP WFMC_1
+EXTEND 
+ %{
+	if(SCATTERED) frame_passed=2;
+ %}
+   
+COMPONENT wfmc_1c = DiskChopper(
+    theta_0 = theta_c*RAD2DEG, radius = radius_wfmc, yheight = window_height_wfmc, nu = actual_wfmc_1, nslit = 1,
+    phase = phi_1c*RAD2DEG)
+  WHEN (pass_chopper==0 && wfmc1_fail==0)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP WFMC_1
+EXTEND 
+ %{
+	if(SCATTERED) frame_passed=3;
+ %}
+   
+COMPONENT wfmc_1d = DiskChopper(
+    theta_0 = theta_d*RAD2DEG, radius = radius_wfmc, yheight = window_height_wfmc, nu = actual_wfmc_1, nslit = 1,
+    phase = phi_1d*RAD2DEG)
+  WHEN (pass_chopper==0 && wfmc1_fail==0)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP WFMC_1
+EXTEND 
+ %{
+	if(SCATTERED) frame_passed=4;
+ %}
+   
+COMPONENT wfmc_1e = DiskChopper(
+    theta_0 = theta_e*RAD2DEG, radius = radius_wfmc, yheight = window_height_wfmc, nu = actual_wfmc_1, nslit = 1,
+    phase = phi_1e*RAD2DEG)
+  WHEN (pass_chopper==0 && wfmc1_fail==0)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP WFMC_1
+EXTEND 
+ %{
+	if(SCATTERED) frame_passed=5;
+ %}
+   
+COMPONENT wfmc_1f = DiskChopper(
+    theta_0 = theta_f*wfm1_f_left*RAD2DEG, radius = radius_wfmc, yheight = window_height_wfmc, nu = actual_wfmc_1, nslit = 1,
+    phase = phi_1f_cut*RAD2DEG)
+  WHEN (pass_chopper==0 && wfmc1_fail==0)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP WFMC_1
+EXTEND 
+ %{
+	if(SCATTERED) frame_passed=6;
+ %}
+
+COMPONENT arm_wfmc1 = Arm()
+  WHEN (pass_chopper!=0 || wfmc1_fail!=0)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP WFMC_1
+EXTEND 
+ %{
+	SCATTER;
+ %}
+
+// ===============================================================
+// 		  Pinhole
+// ===============================================================
+
+/*COMPONENT lambda_before_pin = L_monitor(   
+nL = 100, filename = "lambda_before_pin.dat", xwidth = 0.15,   
+yheight = 0.15, Lmin = 0, Lmax = 10)   
+  AT (0, 0, delta_wfmc/2-u) RELATIVE PREVIOUS   */
+
+COMPONENT pinhole_1= Slit( 
+xwidth=0.015, yheight=0.06) 
+AT (0,0,u) RELATIVE PREVIOUS 
+ROTATED (0,0,0) RELATIVE PREVIOUS 
+
+// ===============================================================
+// 		              WFMC 2
+// ===============================================================
+
+COMPONENT wfmc_2a = DiskChopper(
+    theta_0 = theta_a*RAD2DEG, radius = radius_wfmc, yheight = window_height_wfmc, nu = actual_wfmc_2, nslit = 1,
+    phase = phi_2a*RAD2DEG)
+  WHEN (pass_chopper==0 && wfmc2_fail==0)
+  AT (0, 0, delta_wfmc/2) RELATIVE PREVIOUS
+  GROUP WFMC_2
+  EXTEND 
+  %{ 
+    if(frame_passed !=1) 
+    {false_frame=1;}
+  %}
+  
+COMPONENT wfmc_2b = DiskChopper(
+    theta_0 = theta_b*RAD2DEG, radius = radius_wfmc, yheight = window_height_wfmc, nu = actual_wfmc_2, nslit = 1,
+    phase = phi_2b*RAD2DEG)
+  WHEN (pass_chopper==0 && wfmc2_fail==0)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP WFMC_2
+  EXTEND
+  %{ 
+    if(frame_passed !=2) 
+    {false_frame=1;}
+  %}
+  
+COMPONENT wfmc_2c = DiskChopper(
+    theta_0 = theta_c*RAD2DEG, radius = radius_wfmc, yheight = window_height_wfmc, nu = actual_wfmc_2, nslit = 1,
+    phase = phi_2c*RAD2DEG)
+  WHEN (pass_chopper==0 && wfmc2_fail==0)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP WFMC_2
+  EXTEND
+  %{ 
+    if(frame_passed !=3) 
+    {false_frame=1;}
+  %}
+  
+COMPONENT wfmc_2d = DiskChopper(
+    theta_0 = theta_d*RAD2DEG, radius = radius_wfmc, yheight = window_height_wfmc, nu = actual_wfmc_2, nslit = 1,
+    phase = phi_2d*RAD2DEG)
+  WHEN (pass_chopper==0 && wfmc2_fail==0)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP WFMC_2
+  EXTEND
+  %{ 
+    if(frame_passed !=4) 
+    {false_frame=1;}
+  %}
+  
+COMPONENT wfmc_2e = DiskChopper(
+    theta_0 = theta_e*RAD2DEG, radius = radius_wfmc, yheight = window_height_wfmc, nu = actual_wfmc_2, nslit = 1,
+    phase = phi_2e*RAD2DEG)
+  WHEN (pass_chopper==0 && wfmc2_fail==0)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP WFMC_2
+  EXTEND
+  %{ 
+    if(frame_passed !=5) 
+    {false_frame=1;}
+  %}
+  
+COMPONENT wfmc_2f = DiskChopper(
+    theta_0 = theta_f*RAD2DEG, radius = radius_wfmc, yheight = window_height_wfmc, nu = actual_wfmc_2, nslit = 1,
+    phase = phi_2f*RAD2DEG)
+  WHEN (pass_chopper==0 && wfmc2_fail==0)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP WFMC_2
+  EXTEND
+  %{ 
+    if(frame_passed !=6) 
+    {false_frame=1;}
+  %}
+
+COMPONENT arm_wfmc2 = Arm()
+  WHEN (pass_chopper!=0 || wfmc2_fail!=0)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP WFMC_2
+EXTEND 
+ %{
+	SCATTER;
+ %}
+
+// Lambda Monitor (PSI)
+
+/*COMPONENT lambda_wfmc = L_monitor(   
+nL = 100, filename = "lambda_wfmc.dat", xwidth = 0.1,   
+yheight = 0.1, Lmin = 0, Lmax = 10)   
+AT (0, 0, u) RELATIVE PREVIOUS */
+
+// ===========================================================
+// 	        	Monitors after WFMC
+// ===========================================================
+
+
+/*COMPONENT TOF_wfmc = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_wfmc", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*3e4)
+  AT (0, 0, u) RELATIVE PREVIOUS*/
+/*
+COMPONENT TOF_wfmc_false = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_wfmc_false", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*3e4)
+  WHEN (false_frame == 1)
+  AT (0, 0, u) RELATIVE PREVIOUS
+*/
+/*
+COMPONENT PSD_before_g2 = PSD_monitor(
+    nx = 200, ny = 200, filename = "PSD_before_g2", xwidth = 0.2, yheight = 0.2)
+  AT (position, 0, pos_g2-0.001) RELATIVE Origin
+*/
+
+// ===============================================================
+// 		         Guide 2a (WFMC2 - T0)
+// ===============================================================  
+
+COMPONENT Start_of_g2a = Arm() 
+  AT (0, 0, 0.225-delta_wfmc/2+u) RELATIVE PREVIOUS  // changed from 0.25-delta...
+ROTATED (0,0,0) RELATIVE PREVIOUS
+  
+COMPONENT g2a = Guide_four_side(
+    w1l = g2a_open_x/2, linwl = g2a_focus_in_x,
+    loutwl = g2a_focus_out_x, w1r = g2a_open_x/2,
+    linwr = g2a_focus_in_x, loutwr = g2a_focus_out_x,
+    h1u = g2a_open_y/2, linhu = g2a_focus_in_y,
+    louthu = g2a_focus_out_y, h1d = g2a_open_y/2,
+    linhd = g2a_focus_in_y, louthd = g2a_focus_out_y,
+    l = g2a_length, mxr = g2a_m, mxl = g2a_m, myu = g2a_m,
+    myd = g2a_m)
+  AT (0, 0, u) RELATIVE PREVIOUS
+  ROTATED (0, 0, 0) RELATIVE PREVIOUS
+EXTEND 
+ %{
+	if(SCATTERED) n_count=n_count+1;
+ %}
+
+COMPONENT End_of_g2a= Arm() 
+AT (0,0,g2a_length-u) RELATIVE PREVIOUS 
+ROTATED (0,0,0) RELATIVE PREVIOUS 
+
+// ===============================================================
+// 		T0 Chopper
+// ===============================================================
+
+COMPONENT t0_chopper_alpha = DiskChopper(
+    theta_0 = theta_t0_really*RAD2DEG, radius = radius_t0, yheight = window_height_t0, nu = actual_t0, nslit = 1, 
+    phase = phi_t0*RAD2DEG)
+  WHEN (active_t0_copy==1)
+  AT (0, 0, u) RELATIVE PREVIOUS
+
+COMPONENT t0_chopper_beta = DiskChopper(
+    theta_0 = theta_t0_really*RAD2DEG, radius = radius_t0, yheight = window_height_t0, nu = actual_t0, nslit = 1, 
+    phase = phi_t0*RAD2DEG)
+  WHEN (active_t0_copy==1)
+  AT (0, 0, t0_length) RELATIVE PREVIOUS
+
+/*COMPONENT TOF_t0 = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_t0", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*3e4)
+  AT (0, 0, u) RELATIVE PREVIOUS
+
+COMPONENT lambda_t0 = L_monitor(   
+nL = 500, filename = "lambda_t0.dat", xwidth = 0.1,   
+yheight = 0.1, Lmin = 0, Lmax = 0.5)   
+AT (0, 0, u) RELATIVE PREVIOUS   */
+
+// ===============================================================
+// 	        Guide g2b: T0-FOC1 
+// ===============================================================
+
+COMPONENT Start_of_g2b = Arm() 
+AT (0,0,T0_housing-t0_length) RELATIVE PREVIOUS 
+ROTATED (0,0,0) RELATIVE PREVIOUS
+
+COMPONENT g2b = Guide_four_side(
+    w1l = g2b_open_x/2, linwl = g2b_focus_in_x,
+    loutwl = g2b_focus_out_x, w1r = g2b_open_x/2,
+    linwr = g2b_focus_in_x, loutwr = g2b_focus_out_x,
+    h1u = g2b_open_y/2, linhu = g2b_focus_in_y,
+    louthu = g2b_focus_out_y, h1d = g2b_open_y/2,
+    linhd = g2b_focus_in_y, louthd = g2b_focus_out_y,
+    l = g2b_length, mxr = g2b_m, mxl = g2b_m, myu = g2b_m,
+    myd = g2b_m)
+  AT (0, 0, u) RELATIVE PREVIOUS
+  ROTATED (0, 0, 0) RELATIVE PREVIOUS
+EXTEND 
+ %{
+	if(SCATTERED) n_count=n_count+1;
+ %}
+
+COMPONENT End_of_g2b= Arm() 
+AT (0,0,g2b_length-u) RELATIVE PREVIOUS 
+ROTATED (0,0,0) RELATIVE PREVIOUS
+
+// ==================================================
+// 		Monitors in front of FOC1
+// ==================================================
+
+
+/*COMPONENT TOF_before_fo1_false = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_before_fo1_false", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*3e4)
+  WHEN (false_frame == 1)
+  AT (0, 0, u) RELATIVE PREVIOUS*/
+/*
+COMPONENT TOF_fo1_a = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo1_a", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*3e4)
+  WHEN (frame_passed == 1)
+  AT (0, 0, u) RELATIVE PREVIOUS
+
+COMPONENT TOF_fo1_b = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo1_b", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*3e4)
+  WHEN (frame_passed == 2)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  
+COMPONENT TOF_fo1_c = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo1_c", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*3e4)
+  WHEN (frame_passed == 3)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  
+COMPONENT TOF_fo1_d = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo1_d", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*3e4)
+  WHEN (frame_passed == 4)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  
+COMPONENT TOF_fo1_e = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo1_e", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*3e4)
+  WHEN (frame_passed == 5)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  
+COMPONENT TOF_fo1_f = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo1_f", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*3e4)
+  WHEN (frame_passed == 6)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+ */
+
+// ===============================================================
+// 		FOC 1
+// ===============================================================
+
+COMPONENT fo_chopper_1a = DiskChopper(
+    theta_0 = theta_fo_1a_cut*RAD2DEG, radius = radius_foc1, yheight = window_height_foc1, nu = actual_fo_1, nslit = 1,
+    phase = phi_fo_1a*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=1)
+  AT (0, 0, u) RELATIVE PREVIOUS
+  GROUP FO1
+  EXTEND 
+  %{ 
+    if(frame_passed !=1) 
+    {false_frame=1;
+    fo_false=1;}
+  %}
+
+COMPONENT fo_chopper_1b = DiskChopper(
+    theta_0 = theta_fo_1b_cut*RAD2DEG, radius = radius_foc1, yheight = window_height_foc1, nu = actual_fo_1, nslit = 1,
+    phase = phi_fo_1b*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=1)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO1
+  EXTEND 
+  %{ 
+    if(frame_passed !=2) 
+    {false_frame=1;
+    fo_false=1;}
+  %}
+  
+COMPONENT fo_chopper_1c = DiskChopper(
+    theta_0 = theta_fo_1c_cut*RAD2DEG, radius = radius_foc1, yheight = window_height_foc1, nu = actual_fo_1, nslit = 1,
+    phase = phi_fo_1c*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=1)
+   AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO1
+  EXTEND 
+  %{ 
+    if(frame_passed !=3) 
+    {false_frame=1;
+    fo_false=1;}
+  %}
+  
+COMPONENT fo_chopper_1d = DiskChopper(
+    theta_0 = theta_fo_1d_cut*RAD2DEG, radius = radius_foc1, yheight = window_height_foc1, nu = actual_fo_1, nslit = 1,
+    phase = phi_fo_1d*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=1)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO1
+  EXTEND 
+  %{ 
+    if(frame_passed !=4) 
+    {false_frame=1;
+    fo_false=1;}
+  %}
+  
+COMPONENT fo_chopper_1e = DiskChopper(
+    theta_0 = theta_fo_1e_cut*RAD2DEG, radius = radius_foc1, yheight = window_height_foc1, nu = actual_fo_1, nslit = 1,
+    phase = phi_fo_1e*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=1)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO1
+  EXTEND 
+  %{ 
+    if(frame_passed !=5) 
+    {false_frame=1;
+    fo_false=1;}
+  %}
+  
+COMPONENT fo_chopper_1f = DiskChopper(
+    theta_0 = theta_fo_1f_cut*RAD2DEG, radius = radius_foc1, yheight = window_height_foc1, nu = actual_fo_1, nslit = 1,
+    phase = phi_fo_1f*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=1)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO1
+  EXTEND 
+  %{ 
+    if(frame_passed !=6) 
+    {false_frame=1;
+    fo_false=1;}
+  %}
+
+COMPONENT arm_f01 = Arm()
+  WHEN (pass_chopper!=0 || foc_fail==1)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO1
+EXTEND 
+ %{
+	SCATTER;
+ %}
+
+
+// =================================================
+// 		Monitors after FOC1
+// =================================================
+
+
+/*COMPONENT TOF_fo1 = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo1", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*3e4)
+  AT (0, 0, u) RELATIVE PREVIOUS*/
+
+/*COMPONENT TOF_fo1_false = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo1_false", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*3e4)
+  WHEN (false_frame == 1)
+  AT (0, 0, 0) RELATIVE PREVIOUS*/
+
+// ===============================================================
+// 		Bandpass Chopper 1
+// ===============================================================
+
+
+COMPONENT bp1_chopper = DiskChopper(
+    theta_0 = theta_bp1*RAD2DEG, radius = radius_bp1, yheight = window_height_bp1, nu = actual_bp1, nslit = 1, 
+    phase = phi_bp1*RAD2DEG)
+  WHEN (bp1_fail==0)
+  AT (0, 0, bp_housing) RELATIVE PREVIOUS
+
+/*COMPONENT TOF_bp1 = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_bp1", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*3e4)
+  AT (0, 0, u) RELATIVE PREVIOUS*/
+
+/*
+COMPONENT PSD_before_g3 = PSD_monitor(
+    nx = 200, ny = 200, filename = "PSD_before_g3", xwidth = 0.2, yheight = 0.2)
+  AT (position, 0, pos_g3-0.001) RELATIVE Origin
+*/
+
+
+// ===============================================================
+// 		Guide g2c: FOC1 - FOC2
+// ===============================================================
+
+COMPONENT Start_of_g2c = Arm() 
+AT (0,0,foc_housing-u) RELATIVE PREVIOUS 
+ROTATED (0,0,0) RELATIVE PREVIOUS
+
+COMPONENT g2c = Guide_four_side(
+    w1l = g2c_open_x/2, linwl = g2c_focus_in_x,
+    loutwl = g2c_focus_out_x, w1r = g2c_open_x/2,
+    linwr = g2c_focus_in_x, loutwr = g2c_focus_out_x,
+    h1u = g2c_open_y/2, linhu = g2c_focus_in_y,
+    louthu = g2c_focus_out_y, h1d = g2c_open_y/2,
+    linhd = g2c_focus_in_y, louthd = g2c_focus_out_y,
+    l = g2c_length, mxr = g2c_m, mxl = g2c_m, myu = g2c_m,
+    myd = g2c_m)
+  AT (0, 0, u) RELATIVE PREVIOUS
+  ROTATED (0, 0, 0) RELATIVE PREVIOUS
+EXTEND 
+ %{
+	if(SCATTERED) n_count=n_count+1;
+ %}
+
+COMPONENT End_of_g2c= Arm() 
+AT (0,0,g2c_length-u) RELATIVE PREVIOUS 
+ROTATED (0,0,0) RELATIVE PREVIOUS 
+
+// =============================================
+// 		Monitors in front FOC 2
+// =============================================
+
+/*COMPONENT TOF_before_fo2_false = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_before_fo2_false", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*4e4)
+  WHEN (false_frame == 1)
+  AT (0, 0, u) RELATIVE PREVIOUS*/
+
+/*COMPONENT TOF_fo2_a = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo2_a", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*4e4)
+  WHEN (frame_passed == 1)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT TOF_fo2_b = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo2_b", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*4e4)
+  WHEN (frame_passed == 2)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  
+COMPONENT TOF_fo2_c = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo2_c", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*4e4)
+  WHEN (frame_passed == 3)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  
+COMPONENT TOF_fo2_d = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo2_d", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*4e4)
+  WHEN (frame_passed == 4)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  
+COMPONENT TOF_fo2_e = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo2_e", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*4e4)
+  WHEN (frame_passed == 5)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  
+COMPONENT TOF_fo2_f = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo2_f", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*4e4)
+  WHEN (frame_passed == 6)
+  AT (0, 0, 0) RELATIVE PREVIOUS*/
+
+// ===============================================================
+// 		FOC 2
+// ===============================================================
+
+COMPONENT fo_chopper_2a = DiskChopper(
+    theta_0 = theta_fo_2a_cut*RAD2DEG, radius = radius_foc2, yheight = window_height_foc2, nu = actual_fo_2, nslit = 1,
+    phase = phi_fo_2a*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=2)
+  AT (0, 0, u) RELATIVE PREVIOUS
+  GROUP FO2
+  EXTEND 
+  %{ 
+    if(frame_passed !=1) 
+    {false_frame=1;
+    if(fo_false==0)
+    {fo_false=2;}}
+  %}
+  
+COMPONENT fo_chopper_2b = DiskChopper(
+    theta_0 = theta_fo_2b_cut*RAD2DEG, radius = radius_foc2, yheight = window_height_foc2, nu = actual_fo_2, nslit = 1,
+    phase = phi_fo_2b*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=2)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO2
+  EXTEND 
+  %{ 
+    if(frame_passed !=2) 
+    {false_frame=1;
+    if(fo_false==0)
+    {fo_false=2;}}
+  %}
+  
+COMPONENT fo_chopper_2c = DiskChopper(
+    theta_0 = theta_fo_2c_cut*RAD2DEG, radius = radius_foc2, yheight = window_height_foc2, nu = actual_fo_2, nslit = 1,
+    phase = phi_fo_2c*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=2)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO2
+  EXTEND 
+  %{ 
+    if(frame_passed !=3) 
+    {false_frame=1;
+    if(fo_false==0)
+    {fo_false=2;}}
+  %}
+  
+COMPONENT fo_chopper_2d = DiskChopper(
+    theta_0 = theta_fo_2d_cut*RAD2DEG, radius = radius_foc2, yheight = window_height_foc2, nu = actual_fo_2, nslit = 1,
+    phase = phi_fo_2d*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=2)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO2
+  EXTEND 
+  %{ 
+    if(frame_passed !=4) 
+    {false_frame=1;
+    if(fo_false==0)
+    {fo_false=2;}}
+  %}
+  
+COMPONENT fo_chopper_2e = DiskChopper(
+    theta_0 = theta_fo_2e_cut*RAD2DEG, radius = radius_foc2, yheight = window_height_foc2, nu = actual_fo_2, nslit = 1,
+    phase = phi_fo_2e*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=2)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO2
+  EXTEND 
+  %{ 
+    if(frame_passed !=5) 
+    {false_frame=1;
+    if(fo_false==0)
+    {fo_false=2;}}
+  %}
+  
+COMPONENT fo_chopper_2f = DiskChopper(
+    theta_0 = theta_fo_2f_cut*RAD2DEG, radius = radius_foc2, yheight = window_height_foc2, nu = actual_fo_2, nslit = 1,
+    phase = phi_fo_2f*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=2)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO2
+  EXTEND 
+  %{ 
+    if(frame_passed !=6) 
+    {false_frame=1;
+    if(fo_false==0)
+    {fo_false=2;}}
+  %}
+
+COMPONENT arm_f02 = Arm()
+  WHEN (pass_chopper!=0 || foc_fail==2)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO2
+EXTEND 
+ %{
+	SCATTER;
+ %}
+
+// ========================================================
+// 		Monitors after FOC2
+// ========================================================
+
+/*COMPONENT TOF_fo2 = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo2", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*4e4)
+  AT (0, 0, u) RELATIVE PREVIOUS*/
+/*
+COMPONENT TOF_fo2_false = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo2_false", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*4e4)
+  WHEN (false_frame == 1)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT TOF_only_fo2_false = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_only_fo2_false", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*4e4)
+  WHEN (fo_false == 2)
+  AT (0, 0, 0) RELATIVE PREVIOUS*/
+
+/*
+COMPONENT PSD_before_g4 = PSD_monitor(
+    nx = 200, ny = 200, filename = "PSD_before_g4", xwidth = 0.2, yheight = 0.2)
+  AT (position, 0, ?pos_g4-0.001?) RELATIVE Origin
+*/
+
+// ===============================================================
+// 		Bandpass Chopper
+// ===============================================================
+
+
+COMPONENT bp_chopper = DiskChopper(
+    theta_0 = theta_bp*RAD2DEG, radius = radius_bp, yheight = window_height_bp, nu = actual_bp, nslit = 1, 
+    phase = phi_bp*RAD2DEG)
+  WHEN (bp_fail==0)
+  AT (0, 0, bp_housing) RELATIVE PREVIOUS
+
+/*COMPONENT TOF_bp = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_bp", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*4e4)
+  AT (0, 0, u) RELATIVE PREVIOUS*/
+
+// ===============================================================
+// 		Guide g2d: FOC2/BP - start of hor. straight 
+// ===============================================================
+
+COMPONENT Start_of_g2d = Arm() 
+AT (0,0, foc_housing-u) RELATIVE PREVIOUS 
+ROTATED (0,0,0) RELATIVE PREVIOUS
+
+COMPONENT g2d = Guide_four_side(
+    w1l = g2d_open_x/2, linwl = g2d_focus_in_x,
+    loutwl = g2d_focus_out_x, w1r = g2d_open_x/2,
+    linwr = g2d_focus_in_x, loutwr = g2d_focus_out_x,
+    h1u = g2d_open_y/2, linhu = g2d_focus_in_y,
+    louthu = g2d_focus_out_y, h1d = g2d_open_y/2,
+    linhd = g2d_focus_in_y, louthd = g2d_focus_out_y,
+    l = g2d_length, mxr = g2d_m, mxl = g2d_m, myu = g2d_m,
+    myd = g2d_m)
+  AT (0, 0, u) RELATIVE PREVIOUS
+  ROTATED (0, 0, 0) RELATIVE PREVIOUS
+EXTEND 
+ %{
+	if(SCATTERED) n_count=n_count+1;
+ %}
+
+
+COMPONENT End_of_g2d= Arm() 
+AT (0,0,g2d_length-u) RELATIVE PREVIOUS 
+ROTATED (0,0,0) RELATIVE PREVIOUS 
+
+// ===============================================================
+// 		Guide g3a: start of hor. straight - FOC3 
+// ===============================================================
+
+COMPONENT Start_of_g3a = Arm() 
+AT (0,0,u) RELATIVE PREVIOUS 
+ROTATED (0,0,0) RELATIVE PREVIOUS
+
+COMPONENT g3a = Guide_four_side(
+    w1l = g3a_open_x/2, w1r = g3a_open_x/2,
+    w2l = g4a_open_x/2, w2r = g4a_open_x/2,
+    h1u = g3a_open_y/2, linhu = g3a_focus_in_y,
+    louthu = g3a_focus_out_y, h1d = g3a_open_y/2,
+    linhd = g3a_focus_in_y, louthd = g3a_focus_out_y,
+    l = g3a_length, mxr = g3a_m, mxl = g3a_m,
+    myu = g3a_m, myd = g3a_m)
+  AT (0, 0, u) RELATIVE PREVIOUS
+  ROTATED (0, 0, 0) RELATIVE PREVIOUS
+EXTEND 
+ %{
+	if(SCATTERED) n_count=n_count+1;
+ %}
+
+
+COMPONENT End_of_g3a= Arm() 
+AT (0,0,g3a_length-u) RELATIVE PREVIOUS 
+ROTATED (0,0,0) RELATIVE PREVIOUS 
+
+// ===============================================================
+// 		         FOC3 - Monitors front 
+// ===============================================================
+
+/*COMPONENT TOF_before_fo3_false = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_before_fo3_false", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*6e4)
+  WHEN (false_frame == 1)
+  AT (0, 0, u) RELATIVE PREVIOUS*/
+
+/*COMPONENT TOF_fo3_a = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo3_a", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*6e4)
+  WHEN (frame_passed == 1)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT TOF_fo3_b = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo3_b", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*6e4)
+  WHEN (frame_passed == 2)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  
+COMPONENT TOF_fo3_c = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo3_c", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*6e4)
+  WHEN (frame_passed == 3)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  
+COMPONENT TOF_fo3_d = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo3_d", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*6e4)
+  WHEN (frame_passed == 4)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  
+COMPONENT TOF_fo3_e = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo3_e", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*6e4)
+  WHEN (frame_passed == 5)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  
+COMPONENT TOF_fo3_f = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo3_f", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*6e4)
+  WHEN (frame_passed == 6)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+*/
+
+
+
+// ========================================================================
+// 		FO Chopper 3  
+// ========================================================================
+
+
+COMPONENT fo_chopper_3a = DiskChopper(
+    theta_0 = theta_fo_3a_cut*RAD2DEG, radius = radius_foc3, yheight = window_height_foc3, nu = actual_fo_3, nslit = 1,
+    phase = phi_fo_3a*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=3)
+  AT (0, 0, u) RELATIVE PREVIOUS
+  GROUP FO3
+  EXTEND 
+  %{ 
+    if(frame_passed !=1) 
+    {false_frame=1;
+    if(fo_false==0)
+    {fo_false=3;}}
+  %}
+  
+COMPONENT fo_chopper_3b = DiskChopper(
+    theta_0 = theta_fo_3b_cut*RAD2DEG, radius = radius_foc3, yheight = window_height_foc3, nu = actual_fo_3, nslit = 1,
+    phase = phi_fo_3b*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=3)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO3
+  EXTEND 
+  %{ 
+    if(frame_passed !=2) 
+    {false_frame=1;
+    if(fo_false==0)
+    {fo_false=3;}}
+  %}
+  
+COMPONENT fo_chopper_3c = DiskChopper(
+    theta_0 = theta_fo_3c_cut*RAD2DEG, radius = radius_foc3, yheight = window_height_foc3, nu = actual_fo_3, nslit = 1,
+    phase = phi_fo_3c*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=3)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO3
+  EXTEND 
+  %{ 
+    if(frame_passed !=3) 
+    {false_frame=1;
+    if(fo_false==0)
+    {fo_false=3;}}
+  %}
+  
+COMPONENT fo_chopper_3d = DiskChopper(
+    theta_0 = theta_fo_3d_cut*RAD2DEG, radius = radius_foc3, yheight = window_height_foc3, nu = actual_fo_3, nslit = 1,
+    phase = phi_fo_3d*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=3)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO3
+  EXTEND 
+  %{ 
+    if(frame_passed !=4) 
+    {false_frame=1;
+    if(fo_false==0)
+    {fo_false=3;}}
+  %}
+  
+COMPONENT fo_chopper_3e = DiskChopper(
+    theta_0 = theta_fo_3e_cut*RAD2DEG, radius = radius_foc3, yheight = window_height_foc3, nu = actual_fo_3, nslit = 1,
+    phase = phi_fo_3e*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=3)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO3
+  EXTEND 
+  %{ 
+    if(frame_passed !=5) 
+    {false_frame=1;
+    if(fo_false==0)
+    {fo_false=3;}}
+  %}
+  
+COMPONENT fo_chopper_3f = DiskChopper(
+    theta_0 = theta_fo_3f_cut*RAD2DEG, radius = radius_foc3, yheight = window_height_foc3, nu = actual_fo_3, nslit = 1,
+    phase = phi_fo_3f*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=3)
+   AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO3
+  EXTEND 
+  %{ 
+    if(frame_passed !=6) 
+    {false_frame=1;
+    if(fo_false==0)
+    {fo_false=3;}}
+  %}
+
+COMPONENT arm_f03 = Arm()
+  WHEN (pass_chopper!=0 || foc_fail==3)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO3
+EXTEND 
+ %{
+	SCATTER;
+ %}
+
+
+// =============================================================
+// 		Monitors after FOC 3
+// =============================================================
+
+
+/*COMPONENT TOF_fo3 = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo3", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*6e4)
+  AT (0, 0, u) RELATIVE PREVIOUS*/
+/*
+COMPONENT TOF_fo3_false = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo3_false", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*6e4)
+  WHEN (false_frame == 1)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT TOF_only_fo3_false = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_only_fo3_false", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*6e4)
+  WHEN (fo_false == 3)
+  AT (0, 0, 0) RELATIVE PREVIOUS*/
+
+/*
+COMPONENT PSD_before_g6 = PSD_monitor(
+    nx = 200, ny = 200, filename = "PSD_before_g6", xwidth = 0.2, yheight = 0.2)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+*/
+
+// ===============================================================
+// 		Guide g3b: FOC3 - start of vert. straight 
+// ===============================================================
+
+COMPONENT Start_of_g3b = Arm() 
+  AT (0,0,foc_housing-u) RELATIVE PREVIOUS //// +u,0,-u when  1,2,3 components of FOC+ monitors use
+ROTATED (0,0,0) RELATIVE PREVIOUS
+
+COMPONENT g3b = Guide_four_side(
+    w1l = g3b_open_x/2, w1r = g3b_open_x/2,
+    w2l = g4a_open_x/2, w2r = g4a_open_x/2,
+    h1u = g3b_open_y/2, linhu = g3b_focus_in_y,
+    louthu = g3b_focus_out_y, h1d = g3b_open_y/2,
+    linhd = g3b_focus_in_y, louthd = g3b_focus_out_y,
+    l = g3b_length, mxr = g3b_m, mxl = g3b_m,
+    myu = g3b_m, myd = g3b_m)
+  AT (0, 0, u) RELATIVE PREVIOUS
+  ROTATED (0, 0, 0) RELATIVE PREVIOUS
+EXTEND 
+ %{
+	if(SCATTERED) n_count=n_count+1;
+ %}
+
+
+COMPONENT End_of_g3b= Arm() 
+AT (0,0,g3b_length-u) RELATIVE PREVIOUS 
+ROTATED (0,0,0) RELATIVE PREVIOUS 
+
+// ===============================================================
+// 		Guide g4a: start of vert. straight - FOC4 
+// ===============================================================
+
+COMPONENT Start_of_g4a = Arm() 
+AT (0,0,u) RELATIVE PREVIOUS 
+ROTATED (0,0,0) RELATIVE PREVIOUS
+
+COMPONENT g4a = Guide(
+    w1 = g4a_open_x, h1 = g4a_open_y, w2 = g5a_open_x,
+    h2 = g5a_open_y, l = g4a_length, m = g4a_m)
+  AT (0, 0, u) RELATIVE PREVIOUS
+  ROTATED (0, 0, 0) RELATIVE PREVIOUS
+EXTEND 
+ %{
+	if(SCATTERED) n_count=n_count+1;
+ %}
+
+
+COMPONENT End_of_g4a= Arm() 
+AT (0,0,g4a_length-u) RELATIVE PREVIOUS 
+ROTATED (0,0,0) RELATIVE PREVIOUS 
+// ================================================================
+// 		Monitors in front of FOC 4
+// ================================================================
+
+/*COMPONENT TOF_before_fo4_false = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_before_fo4_false", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*8.5e4)
+  WHEN (false_frame == 1)
+  AT (0, 0, u) RELATIVE PREVIOUS*/
+/*
+COMPONENT TOF_fo4_a = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo4_a", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*8.5e4)
+  WHEN (frame_passed == 1)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT TOF_fo4_b = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo4_b", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*8.5e4)
+  WHEN (frame_passed == 2)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  
+COMPONENT TOF_fo4_c = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo4_c", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*8.5e4)
+  WHEN (frame_passed == 3)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  
+COMPONENT TOF_fo4_d = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo4_d", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*8.5e4)
+  WHEN (frame_passed == 4)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  
+COMPONENT TOF_fo4_e = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo4_e", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*8.5e4)
+  WHEN (frame_passed == 5)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  
+COMPONENT TOF_fo4_f = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo4_f", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*8.5e4)
+  WHEN (frame_passed == 6)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+*/
+
+  
+// ===================================================
+// 		 FO Chopper 4 
+// ===================================================
+
+
+COMPONENT fo_chopper_4a = DiskChopper(
+    theta_0 = theta_fo_4a_cut*RAD2DEG, radius = radius_foc4, yheight = window_height_foc4, nu = actual_fo_4, nslit = 1,
+    phase = phi_fo_4a*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=4)
+  AT (0, 0, u) RELATIVE PREVIOUS
+  GROUP FO4
+  EXTEND 
+  %{ 
+    if(frame_passed !=1) 
+    {false_frame=1;
+    if(fo_false==0)
+    {fo_false=4;}}
+  %}
+  
+COMPONENT fo_chopper_4b = DiskChopper(
+    theta_0 = theta_fo_4b_cut*RAD2DEG, radius = radius_foc4, yheight = window_height_foc4, nu = actual_fo_4, nslit = 1,
+    phase = phi_fo_4b*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=4)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO4
+  EXTEND 
+  %{ 
+    if(frame_passed !=2) 
+    {false_frame=1;
+    if(fo_false==0)
+    {fo_false=4;}}
+  %}
+  
+COMPONENT fo_chopper_4c = DiskChopper(
+    theta_0 = theta_fo_4c_cut*RAD2DEG, radius = radius_foc4, yheight = window_height_foc4, nu = actual_fo_4, nslit = 1,
+    phase = phi_fo_4c*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=4)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO4
+  EXTEND 
+  %{ 
+    if(frame_passed !=3) 
+    {false_frame=1;
+    if(fo_false==0)
+    {fo_false=4;}}
+  %}
+  
+COMPONENT fo_chopper_4d = DiskChopper(
+    theta_0 = theta_fo_4d_cut*RAD2DEG, radius = radius_foc4, yheight = window_height_foc4, nu = actual_fo_4, nslit = 1,
+    phase = phi_fo_4d*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=4)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO4
+  EXTEND 
+  %{ 
+    if(frame_passed !=4) 
+    {false_frame=1;
+    if(fo_false==0)
+    {fo_false=4;}}
+  %}
+  
+COMPONENT fo_chopper_4e = DiskChopper(
+    theta_0 = theta_fo_4e_cut*RAD2DEG, radius = radius_foc4, yheight = window_height_foc4, nu = actual_fo_4, nslit = 1,
+    phase = phi_fo_4e*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=4)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO4
+  EXTEND 
+  %{ 
+    if(frame_passed !=5) 
+    {false_frame=1;
+    if(fo_false==0)
+    {fo_false=4;}}
+  %}
+  
+COMPONENT fo_chopper_4f = DiskChopper(
+    theta_0 = theta_fo_4f_cut*RAD2DEG, radius = radius_foc4, yheight = window_height_foc4, nu = actual_fo_4, nslit = 1,
+    phase = phi_fo_4f*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=4)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO4
+  EXTEND 
+  %{ 
+    if(frame_passed !=6) 
+    {false_frame=1;
+    if(fo_false==0)
+    {fo_false=4;}}
+  %}
+
+COMPONENT arm_f04 = Arm()
+  WHEN (pass_chopper!=0 || foc_fail==4)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO4
+EXTEND 
+ %{
+	SCATTER;
+ %}
+
+
+// =========================================================
+// 		Monitors after FOC 4
+// =========================================================
+
+
+/*COMPONENT TOF_fo4 = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo4", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*8.5e4)
+  AT (0, 0, u) RELATIVE PREVIOUS
+
+COMPONENT TOF_fo4_false = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo4_false", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*8.5e4)
+  WHEN (false_frame == 1)
+  AT (0, 0, 0) RELATIVE PREVIOUS*/
+/*
+COMPONENT TOF_only_fo4_false = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_only_fo4_false", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*8.5e4)
+  WHEN (fo_false == 4)
+  AT (0, 0, 0) RELATIVE PREVIOUS */
+
+/*
+COMPONENT PSD_before_g7 = PSD_monitor(
+    nx = 200, ny = 200, filename = "PSD_before_g7", xwidth = 0.2, yheight = 0.2)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+*/
+
+// =========================================================
+// 		Guide g4b: FOC 4 - end vert. straight 
+// =========================================================
+
+COMPONENT Start_of_g4b = Arm() 
+  AT (0,0,foc_housing) RELATIVE PREVIOUS //// +u,0,-u when  1,2,3 components of FOC+ monitors use
+ROTATED (0,0,0) RELATIVE PREVIOUS
+
+COMPONENT g4b = Guide(
+    w1 = g4b_open_x, h1 = g4b_open_y, w2 = g5a_open_x,
+    h2 = g5a_open_y, l = g4b_length, m = g4b_m)
+  AT (0, 0, u) RELATIVE PREVIOUS
+  ROTATED (0, 0, 0) RELATIVE PREVIOUS
+EXTEND 
+ %{
+	if(SCATTERED) n_count=n_count+1;
+ %}
+
+
+COMPONENT End_of_g4b= Arm() 
+AT (0,0,g4b_length-u) RELATIVE PREVIOUS 
+ROTATED (0,0,0) RELATIVE PREVIOUS 
+
+// =========================================================
+// 		Guide g5a: end vert. straight - FOC 5 
+// =========================================================
+
+COMPONENT Start_of_g5a = Arm() 
+AT (0,0,u) RELATIVE PREVIOUS 
+ROTATED (0,0,0) RELATIVE PREVIOUS
+
+COMPONENT g5a = Guide_four_side(
+    w1l = g5a_open_x/2, w2l = g5a_open_x/2, w1r = g5a_open_x/2,
+    w2r = g5a_open_x/2, h1u = g5a_open_y/2, linhu = g5a_focus_in_y,
+    louthu = g5a_focus_out_y, h1d = g5a_open_y/2,
+    linhd = g5a_focus_in_y, louthd = g5a_focus_out_y,
+    l = g5a_length, mxr = g5a_m, mxl = g5a_m, myu = g5a_m,
+    myd = g5a_m)
+  AT (0, 0, u) RELATIVE PREVIOUS
+  ROTATED (0, 0, 0) RELATIVE PREVIOUS
+EXTEND 
+ %{
+	if(SCATTERED) n_count=n_count+1;
+ %}
+
+
+COMPONENT End_of_g5a= Arm() 
+AT (0,0,g5a_length-u) RELATIVE PREVIOUS 
+ROTATED (0,0,0) RELATIVE PREVIOUS 
+
+// ==========================================================
+// 		Monitors in front of FOC 5
+// ==========================================================
+
+/*COMPONENT TOF_before_fo5_false = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_before_fo5_false", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*8.5e4)
+  WHEN (false_frame == 1)
+  AT (0, 0, u) RELATIVE PREVIOUS*/
+/*
+COMPONENT TOF_fo5_a = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo5_a", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*8.5e4)
+  WHEN (frame_passed == 1)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT TOF_fo5_b = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo5_b", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*8.5e4)
+  WHEN (frame_passed == 2)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  
+COMPONENT TOF_fo5_c = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo5_c", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*8.5e4)
+  WHEN (frame_passed == 3)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  
+COMPONENT TOF_fo5_d = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo5_d", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*8.5e4)
+  WHEN (frame_passed == 4)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  
+COMPONENT TOF_fo5_e = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo5_e", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*8.5e4)
+  WHEN (frame_passed == 5)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  
+COMPONENT TOF_fo5_f = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo5_f", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*8.5e4)
+  WHEN (frame_passed == 6)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+*/
+
+// ===================================================
+// 		 FO Chopper 5
+// ===================================================
+
+
+COMPONENT fo_chopper_5a = DiskChopper(
+    theta_0 = theta_fo_5a_cut*RAD2DEG, radius = radius_foc5, yheight = window_height_foc5, nu = actual_fo_5, nslit = 1,
+    phase = phi_fo_5a*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=5)
+  AT (0, 0, u) RELATIVE PREVIOUS
+  GROUP FO5
+  EXTEND 
+  %{ 
+    if(frame_passed !=1) 
+    {false_frame=1;
+    if(fo_false==0)
+    {fo_false=5;}}
+  %}
+  
+COMPONENT fo_chopper_5b = DiskChopper(
+    theta_0 = theta_fo_5b_cut*RAD2DEG, radius = radius_foc5, yheight = window_height_foc5, nu = actual_fo_5, nslit = 1,
+    phase = phi_fo_5b*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=5)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO5
+  EXTEND 
+  %{ 
+    if(frame_passed !=2) 
+    {false_frame=1;
+    if(fo_false==0)
+    {fo_false=5;}}
+  %}
+  
+COMPONENT fo_chopper_5c = DiskChopper(
+    theta_0 = theta_fo_5c_cut*RAD2DEG, radius = radius_foc5, yheight = window_height_foc5, nu = actual_fo_5, nslit = 1,
+    phase = phi_fo_5c*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=5)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO5
+  EXTEND 
+  %{ 
+    if(frame_passed !=3) 
+    {false_frame=1;
+    if(fo_false==0)
+    {fo_false=5;}}
+  %}
+  
+COMPONENT fo_chopper_5d = DiskChopper(
+    theta_0 = theta_fo_5d_cut*RAD2DEG, radius = radius_foc5, yheight = window_height_foc5, nu = actual_fo_5, nslit = 1,
+    phase = phi_fo_5d*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=5)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO5
+  EXTEND 
+  %{ 
+    if(frame_passed !=4) 
+    {false_frame=1;
+    if(fo_false==0)
+    {fo_false=5;}}
+  %}
+  
+COMPONENT fo_chopper_5e = DiskChopper(
+    theta_0 = theta_fo_5e_cut*RAD2DEG, radius = radius_foc5, yheight = window_height_foc5, nu = actual_fo_5, nslit = 1,
+    phase = phi_fo_5e*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=5)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO5
+  EXTEND 
+  %{ 
+    if(frame_passed !=5) 
+    {false_frame=1;
+    if(fo_false==0)
+    {fo_false=5;}}
+  %}
+  
+COMPONENT fo_chopper_5f = DiskChopper(
+    theta_0 = theta_fo_5f_cut*RAD2DEG, radius = radius_foc5, yheight = window_height_foc5, nu = actual_fo_5, nslit = 1,
+    phase = phi_fo_5f*RAD2DEG)
+  WHEN (pass_chopper==0 && foc_fail!=5)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO5
+  EXTEND 
+  %{ 
+    if(frame_passed !=6) 
+    {false_frame=1;
+    if(fo_false==0)
+    {fo_false=5;}}
+  %}
+
+COMPONENT arm_f05 = Arm()
+  WHEN (pass_chopper!=0 || foc_fail==5)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+  GROUP FO5
+EXTEND 
+ %{
+	SCATTER;
+ %}
+
+
+
+// =========================================================
+// 		Monitors after FOC 5
+// =========================================================
+
+
+/*COMPONENT TOF_fo5 = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo5", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*8.5e4)
+  AT (0, 0, u) RELATIVE PREVIOUS
+
+COMPONENT TOF_fo5_false = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_fo5_false", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*8.5e4)
+  WHEN (false_frame == 1)
+  AT (0, 0, 0) RELATIVE PREVIOUS*/
+/*
+COMPONENT TOF_only_fo5_false = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_only_fo5_false", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*8.5e4)
+  WHEN (fo_false == 5)
+  AT (0, 0, 0) RELATIVE PREVIOUS*/
+
+/*
+COMPONENT PSD_before_g8 = PSD_monitor(
+    nx = 200, ny = 200, filename = "PSD_before_g8", xwidth = 0.2, yheight = 0.2)
+  AT (0, 0, foc_housing) RELATIVE PREVIOUS // change distance below if used!
+*/
+
+
+// =========================================================
+// 		Guide g5b: FOC 5 - end hor. straight 
+// =========================================================
+
+COMPONENT Start_of_g5b = Arm() 
+  AT (0,0,foc_housing - u) RELATIVE PREVIOUS // +u,0,-u when  1,2,3 components of FOC+ monitors used 
+ROTATED (0,0,0) RELATIVE PREVIOUS
+
+COMPONENT g5b = Guide_four_side(
+    w1l = g5b_open_x/2, w2l = g5b_open_x/2, w1r = g5b_open_x/2,
+    w2r = g5b_open_x/2, h1u = g5b_open_y/2, linhu = g5b_focus_in_y,
+    louthu = g5b_focus_out_y, h1d = g5b_open_y/2,
+    linhd = g5b_focus_in_y, louthd = g5b_focus_out_y,
+    l = g5b_length, mxr = g5b_m, mxl = g5b_m, myu = g5b_m,
+    myd = g5b_m)
+  AT (0, 0, u) RELATIVE PREVIOUS
+  ROTATED (0, 0, 0) RELATIVE PREVIOUS
+EXTEND 
+ %{
+	if(SCATTERED) n_count=n_count+1;
+ %}
+
+
+COMPONENT End_of_g5b= Arm() 
+AT (0,0,g5b_length-u) RELATIVE PREVIOUS 
+ROTATED (0,0,0) RELATIVE PREVIOUS 
+
+// =========================================================
+// 		Guide g6: end vert. straight - END
+// =========================================================
+
+COMPONENT Start_of_g6 = Arm() 
+AT (0,0,u) RELATIVE PREVIOUS 
+ROTATED (0,0,0) RELATIVE PREVIOUS
+
+COMPONENT g6 = Guide_four_side(
+    w1l = g6_open_x/2, linwl = g6_focus_in_x,
+    loutwl = g6_focus_out_x, w1r = g6_open_x/2,
+    linwr = g6_focus_in_x, loutwr = g6_focus_out_x,
+    h1u = g6_open_y/2, linhu = g6_focus_in_y,
+    louthu = g6_focus_out_y, h1d = g6_open_y/2,
+    linhd = g6_focus_in_y, louthd = g6_focus_out_y,
+    l = g6_length, mxr = g6_m, mxl = g6_m,
+    myu = g6_m, myd = g6_m)
+  AT (0, 0, u) RELATIVE PREVIOUS
+  ROTATED (0, 0, 0) RELATIVE PREVIOUS
+EXTEND 
+ %{
+	if(SCATTERED) n_count=n_count+1;
+ %}
+
+
+COMPONENT End_of_g6= Arm() 
+AT (0,0,g6_length-u) RELATIVE PREVIOUS 
+ROTATED (0,0,0) RELATIVE PREVIOUS 
+
+
+// =========================================================
+// 		End of Guide Monitors 
+// =========================================================
+
+COMPONENT pinhole_2= Slit( 
+xwidth=0.3, yheight=0.3) 
+AT (0,0,(pin2_pos-g1a_start-(g1a_length+g1b_length+g1c_length+2*light_shutter_gap+T0_housing+5*foc_housing+bp_housing+(wfmc2_pos-wfmc1_pos)+g2a_length+g2b_length+g2c_length+g2d_length+g3a_length+g3b_length+g4a_length+g4b_length+g5a_length+g5b_length+g6_length+14*u))) RELATIVE PREVIOUS 
+ROTATED (0,0,0) RELATIVE PREVIOUS 
+
+/*COMPONENT Div2d_sample_B = Divergence_monitor( 
+nh = 20, nv = 20, filename = "Div2d_sample_B", xwidth = 0.03, 
+yheight = 0.03, maxdiv_h = 0.72, maxdiv_v = 0.72) 
+AT (0, 0,u) RELATIVE PREVIOUS */
+
+/*COMPONENT lambda_cave = L_monitor(   
+nL = 100, filename = "lambda_cave.dat", xwidth = 0.3,   
+yheight = 0.3, Lmin = 0, Lmax = 10)   
+AT (0, 0, u) RELATIVE PREVIOUS   */
+
+COMPONENT After_Slits = PSD_monitor(xwidth=0.1,yheight=0.1,nx=200,ny=200,filename="After_Slits.dat",restore_neutron=1)
+  //AT (0,0,10.0+detector_distance) RELATIVE graph
+AT (0, 0, 0 ) RELATIVE PREVIOUS
+
+COMPONENT graph = Graphite_Diffuser(   
+xwidth = 0.1, ywidth = 0.1, thick = 0.02)   
+WHEN (graph==1)
+AT (0, 0, u) RELATIVE PREVIOUS   
+
+/*COMPONENT sample = PSD_monitor(   
+nx = 300, ny = 300, filename = "image.dat", xwidth = 0.3,   
+yheight = 0.3)   
+AT (0, 0, 10) RELATIVE PREVIOUS   */
+
+  /* PSI */
+COMPONENT scinti_sample = Scintillator(
+    nx = 300, ny = 300, filename = "scinti_sample.dat", xwidth = 0.3,
+    yheight = 0.3, thickness = 100)
+  AT (0, 0, u) RELATIVE PREVIOUS
+
+COMPONENT profile_x = Profile(
+    nP = 300, filename = "profile_x.dat", xwidth = 0.3,
+    yheight = 0.3)
+  AT (0, 0, u) RELATIVE PREVIOUS
+
+COMPONENT profile_y = Profile(
+    nP = 300, filename = "profile_y.dat", xwidth = 0.3,
+    yheight = 0.3)
+  AT (0, 0, u) RELATIVE PREVIOUS
+ROTATED (0, 0, 90) RELATIVE PREVIOUS  
+
+
+COMPONENT After_Profile = PSD_monitor(xwidth=0.1,yheight=0.1,nx=200,ny=200,filename="After_Profile.dat",restore_neutron=1)
+  //AT (0,0,10.0+detector_distance) RELATIVE graph
+AT (0, 0, 0 ) RELATIVE PREVIOUS
+
+COMPONENT End_of_guide = PSD_monitor(xwidth=0.1,yheight=0.1,nx=200,ny=200,filename="End_of_guide.dat",restore_neutron=1)
+AT (0, 0, 0 ) RELATIVE PREVIOUS
+
+COMPONENT virtual_output = Virtual_output(
+    filename="Odin_output.dat")
+AT (0, 0, 0 ) RELATIVE PREVIOUS
+
+// ===============================================================
+// 		Monitors
+// ===============================================================
+
+/*COMPONENT lambda_sample = L_monitor(   
+nL = 100, filename = "lambda_sample.dat", xwidth = 0.3,   
+yheight = 0.3, Lmin = 0, Lmax = 10)   
+AT (0, 0, u) RELATIVE PREVIOUS   
+ROTATED (0, 0, -90) RELATIVE PREVIOUS  
+
+COMPONENT lambda_midi = L_monitor(  
+nL = 100, filename = "lambda_midi.dat", xwidth = 0.15,   
+yheight = 0.15, Lmin = 0, Lmax = 10)   
+AT (0, 0, 0) RELATIVE PREVIOUS   
+
+COMPONENT lambda_short = L_monitor(   
+nL = 500, filename = "lambda_short.dat", xwidth = 0.2,   
+yheight = 0.2, Lmin = 0, Lmax = 0.5)   
+AT (0, 0, 0) RELATIVE PREVIOUS   
+
+COMPONENT pos_lambda_x = PosLambda_monitor(  
+npos = 300, nLambda = 100, filename = "pos_lambda_x.dat",   
+xwidth = 0.3, yheight = 0.3, maxLambda = 10)   
+AT (0, 0, u) RELATIVE PREVIOUS   
+ROTATED (0, 0, 0) RELATIVE PREVIOUS   
+
+COMPONENT pos_lambda_y = PosLambda_monitor(   
+npos = 300, nLambda = 100, filename = "pos_lambda_y.dat",   
+xwidth = 0.3, yheight = 0.3, maxLambda = 10)   
+AT (0, 0, u) RELATIVE PREVIOUS   
+ROTATED (0, 0, 90) RELATIVE PREVIOUS  
+
+COMPONENT div_lambda_x = DivLambda_monitor(
+    nL = 100, nh = 100, filename = "div_lambda_x.dat",
+    xwidth = 0.3, yheight = 0.3, maxdiv_h = 0.75, Lmin = 0,
+    Lmax = 10)
+  AT (0, 0, u) RELATIVE PREVIOUS
+  ROTATED (0, 0, -90) RELATIVE PREVIOUS
+
+COMPONENT div_lambda_y = DivLambda_monitor(
+    nL = 100, nh = 100, filename = "div_lambda_y.dat",
+    xwidth = 0.3, yheight = 0.3, maxdiv_h = 0.75, Lmin = 0,
+    Lmax = 10)
+  AT (0, 0, u) RELATIVE PREVIOUS
+  ROTATED (0, 0, 90) RELATIVE PREVIOUS
+
+COMPONENT div_pos_y = DivPos_monitor(
+    nh = 300, ndiv = 100, filename = "div_pos_y.dat",
+    xwidth = 0.3, yheight = 0.3, maxdiv_h = 0.75)
+  AT (0, 0, u) RELATIVE PREVIOUS
+  ROTATED (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT div_pos_x = DivPos_monitor(
+    nh = 300, ndiv = 100, filename = "div_pos_x.dat",
+    xwidth = 0.3, yheight = 0.3, maxdiv_h = 0.75)
+  AT (0, 0, u) RELATIVE PREVIOUS
+ ROTATED (0, 0, -90) RELATIVE PREVIOUS
+
+COMPONENT Divergence = Divergence_monitor( 
+nh = 100, nv = 100, filename = "divergence,dat", xwidth = 0.3, 
+yheight = 0.3, maxdiv_h = 0.75, maxdiv_v = 0.75) 
+AT (0, 0,u) RELATIVE PREVIOUS */
+  
+
+
+
+
+
+
+  /* TUM STUFF PURPOSE STILL UNCLEAR 
+EXTEND %{
+    frame_passed=0;
+    false_frame=0;
+    pass_chopper=no_choppers;
+    n_count=0;
+    fo_false=0;
+    if (t < 1/freq_source) n_pulse = 1;
+    if (t >= 1/freq_source && t < 2/freq_source) n_pulse = 2;
+    if (t >= 2/freq_source && t < 3/freq_source) n_pulse = 3;
+    if (t >= 3/freq_source && t < 4/freq_source) n_pulse = 4;
+    %} 
+
+COMPONENT Origin = Arm()
+  AT (0, 0, 0) RELATIVE ABSOLUTE 
+
+// ===============================================================
+// 		Monitors
+// ===============================================================
+
+COMPONENT TOF_source = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_source", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*6e3)
+  AT (position, 0, 1) RELATIVE Origin
+
+
+COMPONENT Lambda_source = L_monitor(
+    nL = 512, filename = "Lambda_source", xwidth = 1,
+    yheight = 1, Lmin = 0, Lmax = 10)
+  AT (position, 0, 1) RELATIVE Origin
+
+
+
+
+// ==============================================
+// 		Guide 8 + 9 Monitors TUM
+// ==============================================
+
+COMPONENT PSD_before_g9 = PSD_monitor(
+    nx = 200, ny = 200, filename = "PSD_before_g9", xwidth = 0.2, yheight = 0.2)
+  AT (position, 0, pos_g9-0.0005) RELATIVE Origin
+
+COMPONENT PSD_before_pinhole = PSD_monitor(
+    nx = 200, ny = 200, filename = "PSD_before_pinhole", xwidth = 0.2, yheight = 0.2)
+  AT (position, 0, pos_g9+l_g9+0.001) RELATIVE Origin
+
+
+// ===============================================
+// 		Pinhole
+// ===============================================
+
+*/
+COMPONENT pinhole_detectoradius = Slit(
+    radius = 0.015)
+  AT (position, 0, pin2_pos) RELATIVE Origin
+
+
+
+// ================================================
+// 		Monitors at Detector Position Totally REMOVED put back in if needed 
+// ================================================
+
+  //
+  // TOF monitors
+  //
+
+
+COMPONENT screen = PSD_monitor(xwidth=0.7,yheight=0.7,nx=200,ny=200,filename="absoprtion_picture.dat",restore_neutron=1)
+  //AT (0,0,10.0+detector_distance) RELATIVE graph
+AT (view_t, 0, sample_pos) RELATIVE Origin
+
+COMPONENT L_monitor1 = L_monitor(xwidth=0.7,yheight=0.7,filename="I_lambda1.dat",Lmin=0.0,Lmax=10,restore_neutron=1,nL=100)
+AT (view_t, 0, sample_pos+0.0001) RELATIVE Origin
+
+COMPONENT L_monitor2 = L_monitor(xwidth=0.7,yheight=0.7,filename="I_lambda2.dat",Lmin=0.0,Lmax=10,restore_neutron=1,nL=1000)
+AT (view_t, 0, sample_pos+0.0001) RELATIVE Origin
+
+COMPONENT TOF_detector1 = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_detector", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*2.3e5)
+  AT (view_t, 0, sample_pos) RELATIVE Origin
+
+/*COMPONENT TOF_detector2 = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_detector", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*9.2e5)
+  AT (view_t, 0, sample_pos) RELATIVE Origin*/
+
+/*
+COMPONENT TOF_detector_a = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_detector_a", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*2.3e5)
+  WHEN (frame_passed == 1)
+  AT (view_t, 0, sample_pos) RELATIVE Origin
+
+COMPONENT TOF_detector_b = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_detector_b", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*2.3e5)
+  WHEN (frame_passed == 2)
+  AT (view_t, 0, sample_pos) RELATIVE Origin
+  
+COMPONENT TOF_detector_c = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_detector_c", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*2.3e5)
+  WHEN (frame_passed == 3)
+  AT (view_t, 0, sample_pos) RELATIVE Origin
+  
+COMPONENT TOF_detector_d = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_detector_d", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*2.3e5)
+  WHEN (frame_passed == 4)
+  AT (view_t, 0, sample_pos) RELATIVE Origin
+  
+COMPONENT TOF_detector_e = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_detector_e", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*2.3e5)
+  WHEN (frame_passed == 5)
+  AT (view_t, 0, sample_pos) RELATIVE Origin
+  
+COMPONENT TOF_detector_f = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_detector_f", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*2.3e5)
+  WHEN (frame_passed == 6)
+  AT (view_t, 0, sample_pos) RELATIVE Origin
+
+  // TOF destectors False neutrons 
+/*
+COMPONENT TOF_detector_false = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_detector_false", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*2.3e5)
+  WHEN (false_frame == 1)
+  AT (view_t, 0, sample_pos+u) RELATIVE Origin
+*/
+/*COMPONENT TOF_detector_false = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_detector_false", xwidth = 1,
+    yheight = 1, tmin = 0, tmax = t_scale*9.2e5)
+  WHEN (false_frame == 1)
+  AT (view_t, 0, sample_pos+u) RELATIVE Origin
+
+COMPONENT TOF_only_fo1_false = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_only_fo1_false", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*2.3e5)
+  WHEN (fo_false == 1)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT TOF_only_fo2_false = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_only_fo2_false", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*2.3e5)
+  WHEN (fo_false == 2)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT TOF_only_fo3_false = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_only_fo3_false", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*2.3e5)
+  WHEN (fo_false == 3)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT TOF_only_fo4_false = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_only_fo4_false", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*2.3e5)
+  WHEN (fo_false == 4)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT TOF_only_fo5_false = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_only_fo5_false", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*2.3e5)
+  WHEN (fo_false == 5)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT TOF_detector_pulse1 = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_detector_pulse1.dat", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*2.3e5)
+  WHEN (n_pulse == 1)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT TOF_detector_pulse2 = TOF_monitor(
+    nt = nchanTOF, filename = "TOF_detector_pulse2.dat", xwidth = 0.5,
+    yheight = 0.5, tmin = 0, tmax = t_scale*2.3e5)
+  WHEN (n_pulse == 2)
+  AT (0, 0, 0) RELATIVE PREVIOUS
+
+// TOF LAMBDA detectors
+COMPONENT TOF_Lambda_512 = TOFLambda_monitor(
+	nL = 512, nt = 512, filename = "TOF_Lambda_512", 
+	xwidth = 1, yheight = 1, tmin = 0, tmax = t_scale*2.3e5,
+	Lmin = 0, Lmax = 11)
+AT (0, 0, u) RELATIVE PREVIOUS
+
+COMPONENT TOF_Lambda_2048 = TOFLambda_monitor(
+	nL = 2048, nt = 2048, filename = "TOF_Lambda_2048", 
+	xwidth = 1, yheight = 1, tmin = 0, tmax = t_scale*2.3e5,
+	Lmin = 0, Lmax = 11)
+AT (0, 0, u) RELATIVE PREVIOUS
+
+COMPONENT TOF_monitor_4096 = TOFLambda_monitor(
+	nL = 4096, nt = 4096, filename = "TOF_Lambda_4096", 
+	xwidth = 1, yheight = 1, tmin = 0, tmax = 1e6,
+	Lmin = 0, Lmax = 31)
+AT (0, 0, 0) RELATIVE PREVIOUS
+
+
+COMPONENT TOF_Lambda_long = TOFLambda_monitor(
+	nL = 1024, nt = 1024, filename = "TOF_Lambda_long", 
+	xwidth = 1, yheight = 1, tmin = 1.2e5, tmax = t_scale*4.6e5,
+	Lmin = 10, Lmax = 40.5)
+AT (0, 0, 0) RELATIVE PREVIOUS*/
+
+
+/*
+COMPONENT TOF_Lambda_a = TOFLambda_monitor(
+	nL = nchanTL, nt = nchanTL, filename = "TOF_Lambda_a", 
+	xwidth = 1, yheight = 1, tmin = time_TLa0, tmax = time_TLa1,
+	Lmin = lambda_1-0.15*(lambda_2-lambda_1), Lmax = lambda_2+0.15*(lambda_2-lambda_1))
+WHEN (frame_passed == 1)
+AT (0, 0, pos_detector) RELATIVE origin*/
+/*
+COMPONENT TOF_Lambda_a_false = TOFLambda_monitor(
+	nL = 4096, nt = 4096, filename = "TOF_Lambda_a_false", 
+	xwidth = 1, yheight = 1, tmin = 1.5e4, tmax = 4.5e4,
+	Lmin = 0.67, Lmax = 2.99)
+WHEN (false_frame == 1)
+AT (0, 0, pos_detector) RELATIVE origin*/
+
+
+/*
+COMPONENT TOF_Lambda_b = TOFLambda_monitor(
+	nL = nchanTL, nt = nchanTL, filename = "TOF_Lambda_b", 
+	xwidth = 1, yheight = 1, tmin = time_TLb0, tmax = time_TLb1,
+	Lmin = lambda_2-0.1*(lambda_3-lambda_2), Lmax = lambda_3+0.1*(lambda_3-lambda_2))
+WHEN (frame_passed == 2)
+AT (0, 0, pos_detector) RELATIVE origin*/
+/*
+COMPONENT TOF_Lambda_b_false = TOFLambda_monitor(
+	nL = 4096, nt = 4096, filename = "TOF_Lambda_b_false", 
+	xwidth = 1, yheight = 1, tmin = 3.8e4, tmax = 6.85e4,
+	Lmin = 2.35, Lmax = 4.51)
+WHEN (false_frame == 1)
+AT (0, 0, pos_detector) RELATIVE origin*/
+
+
+/*
+COMPONENT TOF_Lambda_c = TOFLambda_monitor(
+	nL = nchanTL, nt = nchanTL, filename = "TOF_Lambda_c", 
+	xwidth = 1, yheight = 1, tmin = time_TLc0, tmax = time_TLc1,
+	Lmin = lambda_3-0.1*(lambda_4-lambda_3), Lmax = lambda_4+0.1*(lambda_4-lambda_3))
+WHEN (frame_passed == 3)
+AT (0, 0, pos_detector) RELATIVE origin*/
+/*
+COMPONENT TOF_Lambda_c_false = TOFLambda_monitor(
+	nL = 4096, nt = 4096, filename = "TOF_Lambda_c_false", 
+	xwidth = 1, yheight = 1, tmin = 6.2e4, tmax = 9.0e4,
+	Lmin = 3.96, Lmax = 5.86)
+WHEN (false_frame == 1)
+AT (0, 0, pos_detector) RELATIVE origin*/
+
+
+/*
+COMPONENT TOF_Lambda_d = TOFLambda_monitor(
+	nL = nchanTL, nt = nchanTL, filename = "TOF_Lambda_d", 
+	xwidth = 1, yheight = 1, tmin = time_TLd0, tmax = time_TLd1,
+	Lmin = lambda_4-0.1*(lambda_5-lambda_4), Lmax = lambda_5+0.1*(lambda_5-lambda_4))
+WHEN (frame_passed == 4)
+AT (0, 0, pos_detector) RELATIVE origin*/
+/*
+COMPONENT TOF_Lambda_d_false = TOFLambda_monitor(
+	nL = 4096, nt = 4096, filename = "TOF_Lambda_d_false", 
+	xwidth = 1, yheight = 1, tmin = 8.3e4, tmax = 10.9e4,
+	Lmin = 5.36, Lmax = 7.19)
+WHEN (false_frame == 1)
+AT (0, 0, pos_detector) RELATIVE origin*/
+
+
+/*
+COMPONENT TOF_Lambda_e = TOFLambda_monitor(
+	nL = nchanTL, nt = nchanTL, filename = "TOF_Lambda_e", 
+	xwidth = 1, yheight = 1, tmin = time_TLe0, tmax = time_TLe1,
+	Lmin = lambda_5-0.1*(lambda_6-lambda_5), Lmax = lambda_6+0.1*(lambda_6-lambda_5))
+WHEN (frame_passed == 5)
+AT (0, 0, pos_detector) RELATIVE origin*/
+/*
+COMPONENT TOF_Lambda_e_false = TOFLambda_monitor(
+	nL = 4096, nt = 4096, filename = "TOF_Lambda_e_false", 
+	xwidth = 1, yheight = 1, tmin = 10.3e4, tmax = 12.8e4,
+	Lmin = 6.69, Lmax = 8.37)
+WHEN (false_frame == 1)
+AT (0, 0, pos_detector) RELATIVE origin*/
+
+
+/*
+COMPONENT TOF_Lambda_f = TOFLambda_monitor(
+	nL = nchanTL, nt = nchanTL, filename = "TOF_Lambda_f", 
+	xwidth = 1, yheight = 1, tmin = time_TLf0, tmax = time_TLf1,
+	Lmin = lambda_6-0.1*(lambda_7-lambda_6), Lmax = lambda_7+0.1*(lambda_7-lambda_6))
+WHEN (frame_passed == 6)
+AT (0, 0, pos_detector) RELATIVE origin*/
+/*
+COMPONENT TOF_Lambda_f_false = TOFLambda_monitor(
+	nL = 4096, nt = 4096, filename = "TOF_Lambda_f_false", 
+	xwidth = 1, yheight = 1, tmin = 12.2e4, tmax = 14.7e4,
+	Lmin = 7.91, Lmax = 9.7)
+WHEN (false_frame == 1)
+AT (0, 0, pos_detector) RELATIVE origin*/
+
+
+  //Beam Dump (Beam Stop)
+/*
+COMPONENT beam_dump = PSD_monitor(   
+nx = 250, ny = 250, filename = "beamdump.dat", xwidth = 0.5,   
+yheight = 0.5)   
+AT (0, 0, 3) RELATIVE PREVIOUS   
+  ROTATED (0, 0, -90) RELATIVE PREVIOUS
+*/
+
+
+
+FINALLY
+%{
+%}
+
+
+END
+
+
+
