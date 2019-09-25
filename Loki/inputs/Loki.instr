@@ -1,0 +1,816 @@
+/*******************************************************************************
+*         mcstas instrument definition url=http://www.mcstas.org
+*
+* instrument: Loki
+*
+* %identification
+* written by: andrew jackson (andrew.jackson@esss.se)
+* date: 2019-05-26
+* origin: ESS
+* release: mcstas 2.5
+* version: 3.0
+* %instrument_site: ESS
+*
+* LoKI
+*
+* %description
+* Model of LoKI matching state of engineering design in May 2019 and simplified
+*
+* Notes:
+* - Benders do not use realistic reflectivities
+*
+* Example:
+*
+* %parameters
+*
+*******************************************************************************/
+
+
+DEFINE INSTRUMENT Loki( double collen=3.0,
+                        double reardet=5.0,
+                        double l_min=3.0,
+                        double l_max=11.5,
+                        double sourceapx=0.03,
+                        double sampleapx=0.01,
+                        int pulseskip=0,
+                        int sampletype=0,
+                        double incohb=0.0001
+                        )
+
+DECLARE
+%{
+
+  //include loki functions for chopper calcs etc
+  #include "loki_functions.c"
+
+  //variable declaration
+  double bandwidth, l_min_source, l_max_source;
+  int usesample;
+
+  //MCPL output flags
+  int iflag_scatt = 0;
+  int iflag_scatt_12 = 0;
+
+  // Moderator variables for 2015 moderator
+  double modwidth_c = 0.1;
+  double modwidth_t = 0.18;
+  double modheight = 0.03;
+  double modopening = 120;
+  char* moderator = "2015";
+  int beamport_pos = 25; // default to port 7
+
+  // Moderator variables for butterfly
+  int beamport_number = 7; // default to port 7
+  char * beamport_sector = "N"; // default to North sector
+
+  //optics variables
+  double opticsstart, guidewidth, guideheight;
+  double defaultm,cg1m,cg2m;
+  double bend1pos, bend1r, bend1l, bend1nchan, bend1d;
+  double bend2pos, bend2r, bend2l, bend2nchan, bend2d;
+  double guide1l, guide2al, guide2bl, guide3l, guide3al, guide3bl, guide3cl, guide3dl;
+  double guide4l, guide5al, guide5bl, guide6l;
+  double colguide1l, colguide2l;
+  int fourjawslit1used, fourjawslit2used, fourjawslit3used;
+  double fourjawthickness;
+  double samplepos, sampleappos;
+  // Allow for future asymmetry in apertures.
+  // Currently, set y values same as xvalues unless they are larger than the guide.
+  double sampleapy, sourceapy;
+
+  //Chopper variables
+  double chopperfreq;
+  double chopper1pos,chopper2pos,reschopper1pos,reschopper2pos,reschopper3pos;
+  double choppergap, diskgap, diskthickness, diskoffset;
+  double chopper1_slit,chopper2_slit;
+  double chopper1opent,chopper1adelay,chopper1bdelay;
+  double chopper2opent,chopper2adelay,chopper2bdelay;
+
+  //Strings
+  char mcploutput_filename[256];
+
+%}
+
+INITIALIZE
+%{
+  //Initialise some values
+
+  // Determine if sample is used
+  if (sampletype < 0){ usesample = 0; } else { usesample = 1;};
+
+  //Set up filenames for trajectory output
+  sprintf (mcploutput_filename,
+      "loki-collen_%.1fm-ap1_%.0fmm-ap2_%.0fmm-lmin_%.1fA-lmax_%.1fA.mcpl.gz",
+      collen, sourceapx*1000.0, sampleapx*1000.0, l_min, l_max);
+  printf("MCPL output enabled to file %s\n",mcploutput_filename);
+
+
+  // Overall coordinate is the ESS TCS (target centre system) on which
+  // the moderator should be centred.
+  //
+  // The guide, however, has to point at the correct part of the butterfly moderator.
+  //
+  // basic reference positions and lengths
+  opticsstart = 1.9; // start of beam extraction relative to source
+  guidewidth = 0.03; // guide width for benders and collimation
+  guideheight = 0.025; // guide height for benders and collimation
+  defaultm = 2.0;
+
+  // bender 1 details
+  bend1r = -61.25; // bender radius in m
+  bend1l = 3.5; // bender length in m
+  bend1nchan = 5; // number of bender channels
+  bend1d = 0.0005; // thickness of channel walls
+
+  // bender 2 details
+  bend2r = 61.25; // bender radius in m
+  bend2l = 3.5; // bender length in m
+  bend2nchan = 5; // number of bender channels
+  bend2d = 0.0005; // thickness of channel walls
+
+  //choppers
+  //Gaps
+  //10gap+17blade+16gap+17+10=70mm
+  choppergap = 0.01; //Gap before or after a chopper disk or pair
+  diskgap = 0.016; // Gap between chopper disks
+  diskthickness = 0.017; // Chopper disk thickness
+  //Openings
+  chopper1_slit = 120; // angular opening in each disk in chopper 1 pair
+  chopper2_slit = 190; // angular opening in each disk in chopper 2 pair
+
+  //Positions
+  chopper1pos = 6.5-opticsstart; //Position of centre of bandwidth chopper pair
+  chopper2pos = 15.21-opticsstart; //Position of centre of frame overlap pair
+  reschopper1pos = 7.0-opticsstart; //Postion of resolution chopper 1 pair
+  reschopper2pos = 9.5-opticsstart; //Position of resolution chopper 2 pair
+  reschopper3pos = 10.5-opticsstart; //Position of resolution chopper 3 pair
+
+  //Chopper calculations
+  diskoffset = (diskgap+diskthickness)/2.0; // Distance from centre of pair to centre of disk thickness
+
+  chopperfreq = 14.0/(1.0+(double)pulseskip);
+  //chopper 1
+  chopper1opent = calcopentime(chopper1pos+opticsstart, l_min, l_max);
+  chopper1adelay = calcdisk1delay(chopper1pos-diskoffset+opticsstart,chopper1_slit,l_min,chopperfreq);
+  chopper1bdelay = calcdisk2delay(chopper1pos+diskoffset+opticsstart,chopper1_slit,l_max,chopperfreq);
+
+  //chopper 2
+  chopper2opent = calcopentime(chopper2pos+opticsstart, l_min, l_max);
+  chopper2adelay = calcdisk1delay(chopper2pos-diskoffset+opticsstart,chopper2_slit,l_min,chopperfreq);
+  chopper2bdelay = calcdisk2delay(chopper2pos+diskoffset+opticsstart,chopper2_slit,l_max,chopperfreq);
+
+  printf("-- Chopper Calcs --\n");
+  printf("L_min = %g A\n",l_min);
+  printf("L_max = %g A\n", l_max);
+  printf("---- chopper1 open time = %g ms\n",chopper1opent);
+  printf("---- chopper1a delay = %g ms\n",chopper1adelay);
+  printf("---- chopper1b delay = %g ms\n",chopper1bdelay);
+
+  printf("---- chopper2 open time = %g ms\n",chopper2opent);
+  printf("---- chopper2a delay = %g ms\n",chopper2adelay);
+  printf("---- chopper2b delay = %g ms\n",chopper2bdelay);
+
+  //Guide lengths etc
+  guide1l = 0.48; // in light shutter
+  guide2al = 0.44; // before bandwidth chopper
+  guide2bl = 0.44; // after bandwidth chopper
+  guide3l = 3.9; // Guide between bandwidth chopper and intermediate shutter
+  guide4l = 0.6; // guide through intermediate shutter
+  guide5al = 0.18; // guide before frame overlap chopper
+  guide5bl = 0.10; // guide after frame overlap chopper
+
+  //Slit assembly
+  fourjawthickness = 0.05;
+
+  //Collimators
+  colguide1l = 3.0 - fourjawthickness/2.0;
+  colguide2l = 2.0 - fourjawthickness/2.0;
+
+  //Default configuration is 3m collimation length
+  fourjawslit1used = 0;
+  fourjawslit2used = 0;
+  fourjawslit3used = 1;
+
+
+  //Set aperture sizes
+  // If the width is greater than guide height, limit aperture height
+  // Otherwise, set height and width equal
+  if (sourceapx > guideheight){
+    sourceapy = guideheight;
+  } else {
+    sourceapy = sourceapx;
+  }
+  if (sampleapx > guideheight){
+    sampleapy = guideheight;
+  } else {
+    sampleapy = sampleapx;
+  }
+
+  // apertures
+    if (collen == 8.0){
+    fourjawslit1used = 1;
+    fourjawslit2used = 0;
+    fourjawslit3used = 0;
+    cg1m = 0;
+    cg2m = 0;
+  } else if(collen == 5.0) {
+    fourjawslit1used = 0;
+    fourjawslit2used = 1;
+    fourjawslit3used = 0;
+    cg1m = defaultm;
+    cg2m = 0;
+  } else if(collen == 3.0) {
+    fourjawslit1used = 0;
+    fourjawslit2used = 0;
+    fourjawslit3used = 1;
+    cg1m = defaultm;
+    cg2m = defaultm;
+  } else {
+    collen = 3.0; // default to 3.0 m collimation
+    fourjawslit1used = 0;
+    fourjawslit2used = 0;
+    fourjawslit3used = 1;
+    cg1m = defaultm;
+    cg2m = defaultm;
+  }
+
+  samplepos = 23.5-opticsstart;
+  sampleappos = samplepos-0.005; // position of sample aperture relative to sample
+
+  //Calculation based on leading edge of first chopper pair and trailing edge of second chopper pair
+  //Need to feed a wider band from the source than just the penumbra to allow the choppers to chop.
+  l_min_source = 0.7*calclambda(2.86,l_min*(chopper1pos-diskoffset+opticsstart)/3.96,chopper1pos-diskoffset+opticsstart);
+  l_max_source = 1.5*calclambda(0, l_max*(chopper2pos+diskoffset+opticsstart)/3.96+2.86, chopper2pos+diskoffset+opticsstart);
+  printf ("l_min_source = %g : l_max_source = %g\n",l_min_source,l_max_source);
+
+%}
+
+TRACE
+
+COMPONENT Origin = Progress_bar()
+  AT (0,0,0) ABSOLUTE
+
+COMPONENT Source =  ESS_butterfly(
+          sector=beamport_sector,
+          beamline=beamport_number,
+          Lmin=l_min_source,
+          Lmax=l_max_source,
+          target_index=3,
+          cold_frac=0.5,
+          yheight=0.03,
+          focus_xw=guidewidth, focus_yh=guideheight)
+AT (0,0,0) RELATIVE Origin
+
+COMPONENT ISCS = Arm()
+  AT (-0.04162,0,0.00977) RELATIVE Source
+
+COMPONENT InstrumentArm = Arm()
+  AT (0,0,0) RELATIVE ISCS
+  ROTATED (0,0.8,0) RELATIVE ISCS
+
+COMPONENT FirstMon = Monitor_nD(
+  xwidth = 0.035, yheight = 0.035,
+  options="lambda bins=20",
+  restore_neutron = 1
+)
+AT (0,0,opticsstart-0.001) RELATIVE InstrumentArm
+
+/// Bender 1 ///////////////////////////////////////////////////////////////////
+COMPONENT Bender1Arm = Arm()
+AT (0,0,opticsstart) RELATIVE InstrumentArm
+
+COMPONENT window0a = Al_window(thickness=0.001)
+AT (0, 0, 0.0001) RELATIVE Bender1Arm
+
+COMPONENT bender1 = Vertical_Bender(
+  xwidth = guidewidth,
+  yheight = guideheight,
+  radius = bend1r,
+  nchan = bend1nchan,
+  length = bend1l,
+  d=bend1d,
+  rTopPar = {0.99, 0.0219, 6.07, 3.0, 0.003},
+  rBottomPar = {0.99, 0.0219, 6.07, 3.0, 0.003},
+  rSidesPar = {0.99, 0.0219, 6.07, 2.0, 0.003},
+  endFlat=0.0,
+  drawOption=1.0)
+AT (0, 0, 0.002) RELATIVE Bender1Arm
+ROTATED (0, 0, 0) RELATIVE Bender1Arm
+/// End Bender 1 ///////////////////////////////////////////////////////////////
+
+COMPONENT window0b = Al_window(thickness=0.001)
+AT (0,-calcY(bend1l, abs(bend1r)), calcZ(bend1l, abs(bend1r))+0.002) RELATIVE PREVIOUS
+
+/// Monolith window ////////////////////////////////////////////////////////////
+COMPONENT window1 = Al_window(thickness=0.004)
+AT (0, 0, 0.003) RELATIVE PREVIOUS
+////////////////////////////////////////////////////////////////////////////////
+
+/*COMPONENT Mon1_PostBend1 = Monitor_nD(
+ xwidth=0.035, yheight=0.035,
+ options="lambda, time, multiple, auto",
+ restore_neutron = 1
+)
+AT (0, 0, 0.00401) RELATIVE PREVIOUS*/
+
+/// Arm for bunker components //////////////////////////////////////////////////
+COMPONENT BunkerArm = Arm()
+AT (0.0, -calcY(bend1l, abs(bend1r)), calcZ(bend1l, abs(bend1r))+0.015) RELATIVE Bender1Arm
+ROTATED (calcAlpha(bend1l,abs(bend1r)), 0 , 0) RELATIVE Bender1Arm
+
+/// Light Shutter //////////////////////////////////////////////////////////////
+COMPONENT lightshutter_win1 = Al_window(thickness=0.0005)
+AT (0, 0, 0.01) RELATIVE BunkerArm
+
+COMPONENT guide1 = Guide_gravity(
+  w1 = guidewidth, w2 = guidewidth,
+  h1 = guideheight, h2 = guideheight,
+  l = guide1l,
+  m = defaultm
+)
+AT (0,0,0.002) RELATIVE PREVIOUS
+
+COMPONENT g2_win2 = Al_window(thickness=0.0005)
+AT (0,0,guide1l+0.002) RELATIVE PREVIOUS
+/// End Light Shutter //////////////////////////////////////////////////////////
+
+/*COMPONENT Mon2_PostLS = Monitor_nD(
+ xwidth=0.03, yheight=0.03,
+ options="lambda, time, multiple, auto",
+ restore_neutron = 1
+)
+AT (0,0,0.0006) RELATIVE PREVIOUS*/
+
+////////////////////////////////////////////////////////////////////////////////
+// Chopper pit 1
+// Piece of guide, two chopper disks, next piece of guide
+
+COMPONENT cp1_win1 = Al_window(thickness=0.0005)
+AT (0,0,0.01) RELATIVE PREVIOUS
+
+COMPONENT guide2a = Guide_gravity(
+  w1 = guidewidth, w2 = guidewidth,
+  h1 = guideheight, h2 = guideheight,
+  l = guide2al,
+  m = defaultm
+)
+AT (0,0,0.002) RELATIVE PREVIOUS
+
+COMPONENT Chopper1A = DiskChopper(
+  radius=0.35, yheight=0.04, theta_0=chopper1_slit, nslit=1, nu=chopperfreq, delay=chopper1adelay/1000)
+  AT (0, 0, guide2al+choppergap+diskthickness*0.5) RELATIVE PREVIOUS
+
+COMPONENT Chopper1B = DiskChopper(
+  radius=0.35, yheight=0.04, theta_0=chopper1_slit, nslit=1, nu=chopperfreq, delay=chopper1bdelay/1000)
+  AT (0, 0, diskgap+diskthickness*0.5) RELATIVE PREVIOUS
+
+COMPONENT guide2b = Guide_gravity(
+  w1 = guidewidth, w2 = guidewidth,
+  h1 = guideheight, h2 = guideheight,
+  l = guide2bl,
+  m = defaultm
+)
+AT (0,0,choppergap+diskthickness*0.5) RELATIVE PREVIOUS
+
+COMPONENT cp1_win2 = Al_window(thickness=0.0005)
+AT (0,0,guide2bl+0.002) RELATIVE PREVIOUS
+
+/// End Chopper Pit 1 //////////////////////////////////////////////////////////
+
+/*COMPONENT Mon3_PostBWC = Monitor_nD(
+ xwidth=0.035, yheight=0.035,
+ options="lambda, time, multiple, auto",
+ restore_neutron = 1
+)
+AT (0,0,0.001) RELATIVE PREVIOUS*/
+
+/// Guide 3 ////////////////////////////////////////////////////////////////////
+COMPONENT g3_win1 = Al_window(thickness=0.0005)
+AT (0, 0, 0.05) RELATIVE PREVIOUS
+
+COMPONENT guide3 = Guide_gravity(
+  w1 = guidewidth, w2 = guidewidth,
+  h1 = guideheight, h2 = guideheight,
+  l = guide3l,
+  m = defaultm
+)
+AT (0,0,0.002) RELATIVE PREVIOUS
+
+COMPONENT g3_win2 = Al_window(thickness=0.0005)
+AT (0,0,guide3l+0.002) RELATIVE PREVIOUS
+/// End Guide 3 ////////////////////////////////////////////////////////////////
+
+/// Guide 4 with intermediate shutter //////////////////////////////////////////
+COMPONENT g4_win1 = Al_window(thickness=0.001)
+AT (0, 0, 0.05) RELATIVE PREVIOUS
+
+COMPONENT guide4 = Guide_gravity(
+  w1 = guidewidth, w2 = guidewidth,
+  h1 = guideheight, h2 = guideheight,
+  l = guide4l,
+  m = defaultm
+)
+AT (0,0,0.001) RELATIVE PREVIOUS
+
+COMPONENT g4_win2 = Al_window(thickness=0.001)
+AT (0,0,guide4l+0.001) RELATIVE PREVIOUS
+/// End Guide 4 with intermediate shutter //////////////////////////////////////
+
+/// Bender 2 ///////////////////////////////////////////////////////////////////
+COMPONENT bender2_win1 = Al_window(thickness=0.0005)
+AT (0,0,0.01) RELATIVE PREVIOUS
+
+COMPONENT bender2 = Vertical_Bender(
+  xwidth = guidewidth,
+  yheight = guideheight,
+  radius = bend2r,
+  nchan = bend2nchan,
+  length = bend2l,
+  d=bend2d,
+  rTopPar = {0.99, 0.0219, 6.07, 3.0, 0.003},
+  rBottomPar = {0.99, 0.0219, 6.07, 3.0, 0.003},
+  rSidesPar = {0.99, 0.0219, 6.07, 2.0, 0.003},
+  endFlat=0.0,
+  drawOption=1.0)
+AT (0, 0, 0.002) RELATIVE Previous
+ROTATED (0, 0, 0) RELATIVE BunkerArm
+
+/// End Bender 2 ///////////////////////////////////////////////////////////////
+
+
+COMPONENT CollimationArm = Arm()
+AT (0,calcY(bend2l, abs(bend2r)),calcZ(bend2l, abs(bend2r))) RELATIVE PREVIOUS
+ROTATED (-calcAlpha(bend2l,abs(bend2r)), 0 , 0) RELATIVE PREVIOUS
+
+/// Chopper Pit 3 - Frame overlap chopper //////////////////////////////////////
+
+/// Straight guide here ///////////
+COMPONENT guide5a = Guide_gravity(
+  w1 = guidewidth, w2 = guidewidth,
+  h1 = guideheight, h2 = guideheight,
+  l = guide5al,
+  m = defaultm
+)
+AT (0,0,0.0001) RELATIVE PREVIOUS
+
+COMPONENT Chopper2A = DiskChopper(
+  radius=0.35, yheight=0.04, theta_0=chopper2_slit, nslit=1, nu=chopperfreq, delay=chopper2adelay/1000)
+  AT (0, 0, guide5al+choppergap+diskthickness*0.5) RELATIVE PREVIOUS
+
+COMPONENT Chopper2B = DiskChopper(
+  radius=0.35, yheight=0.04, theta_0=chopper2_slit, nslit=1, nu=chopperfreq, delay=chopper2bdelay/1000)
+  AT (0, 0, diskgap+diskthickness*0.5) RELATIVE PREVIOUS
+
+COMPONENT guide5b = Guide_gravity(
+    w1 = guidewidth, w2 = guidewidth,
+    h1 = guideheight, h2 = guideheight,
+    l = guide5bl,
+    m = defaultm
+)
+  AT (0,0,choppergap+diskthickness*0.5) RELATIVE PREVIOUS
+
+COMPONENT cp2_win2 = Al_window(thickness=0.0005)
+  AT (0,0,guide5bl+0.002) RELATIVE PREVIOUS
+
+/*COMPONENT Mon10_PostFOC = Monitor_nD(
+ xwidth=0.035, yheight=0.035,
+ options="lambda, time, multiple, auto",
+ restore_neutron = 1
+)
+AT (0,0,guide5bl+0.0001) RELATIVE PREVIOUS*/
+
+/// Slits at start of collimation //////////////////////////////////////////////
+COMPONENT fourjawslit1 = Slit(
+  xmin = -sourceapx/2.0,
+  xmax = sourceapx/2.0,
+  ymin = -sourceapy/2.0,
+  ymax = sourceapy/2.0
+)
+WHEN (fourjawslit1used == 1)
+AT (0,0,0.025+fourjawthickness/2.0) RELATIVE PREVIOUS
+/// End slits //////////////////////////////////////////////////////////////////
+
+/// Collimator system //////////////////////////////////////
+/// No baffles included - absorbing tubes instead
+/// works using logic in definitions to set m value to 0 when guide is "out"
+
+// Colguide1 inserted if collimation length is <= 5m
+COMPONENT colGuide1 = Guide_gravity(
+  w1 = guidewidth, h1 = guideheight,
+  w2 = guidewidth, h2 = guideheight,
+  l = colguide1l, m = cg1m
+  )
+AT (0,0,0.001+fourjawthickness/2.0) RELATIVE PREVIOUS
+
+// Slits used for 5m collimation
+COMPONENT fourjawslit2 = Slit(
+  xmin = -sourceapx/2.0,
+  xmax = sourceapx/2.0,
+  ymin = -sourceapy/2.0,
+  ymax = sourceapy/2.0
+)
+WHEN (fourjawslit2used == 1)
+AT (0,0,colguide1l+fourjawthickness/2.0) RELATIVE PREVIOUS
+
+// Collguide2 inserted if collimation length is <= 3 m
+COMPONENT colGuide2 = Guide_gravity(
+  w1 = guidewidth, h1 = guideheight,
+  w2 = guidewidth, h2 = guideheight,
+  l = colguide2l, m = cg2m
+)
+AT (0,0,fourjawthickness/2.0) RELATIVE PREVIOUS
+
+// Slits used for 3m collimation
+COMPONENT fourjawslit3 = Slit(
+  xmin = -sourceapx/2.0,
+  xmax = sourceapx/2.0,
+  ymin = -sourceapy/2.0,
+  ymax = sourceapy/2.0
+)
+WHEN (fourjawslit3used == 1)
+AT (0,0,colguide2l+fourjawthickness/2.0) RELATIVE PREVIOUS
+
+/// flight tube and sample aperture ////////////////////////////////////////////
+// Should include baffles here - using absorbing tube instead
+
+COMPONENT flighttube1 = Guide_gravity(
+  w1 = 0.1, w2 = 0.1, h1 = 0.1, h2 = 0.1, m=0,
+  l = 0.75
+)
+AT (0,0,fourjawthickness/2.0) RELATIVE PREVIOUS
+
+/*COMPONENT haloMonitor = Monitor_nD(
+  xwidth=0.04, yheight=0.04,
+  options="x bins=500 y bins=500",
+  restore_neutron = 1
+)
+AT (0,0,0.7501) RELATIVE PREVIOUS*/
+
+COMPONENT flighttube2 = Guide_gravity(
+  w1 = 0.1, w2 = 0.1, h1 = 0.1, h2 = 0.1, m=0,
+  l = 3.0-0.75-0.025-fourjawthickness-0.005
+)
+AT (0,0,0.025) RELATIVE PREVIOUS
+
+//Sample aperture position : need to get exact offset from jawset3 : AJJ 2019-05-26
+COMPONENT sampleaperture = Slit(
+    xmin = -sampleapx/2.0,
+    xmax = sampleapx/2.0,
+    ymin = -sampleapy/2.0,
+    ymax = sampleapy/2.0
+)
+AT (0,0,3.0-0.005) RELATIVE fourjawslit3
+
+/*COMPONENT Mon16_PostSampleAperture = Monitor_nD(
+ xwidth=0.03, yheight=0.03,
+ options="multiple, lambda bins=50 limits=[1.0,20.0], time bins=50",
+ restore_neutron = 1
+)
+AT (0,0,0.0001) RELATIVE PREVIOUS
+
+COMPONENT Mon16a_PostSampleAperture = Monitor_nD(
+ xwidth=guidewidth, yheight=0.03,
+ options="ydiv lambda all auto",
+ restore_neutron = 1
+)
+AT (0,0,0.0001) RELATIVE PREVIOUS
+
+COMPONENT Mon16b_PostSampleAperture = Monitor_nD(
+ xwidth=guidewidth, yheight=0.03,
+ options="xdiv lambda all auto",
+ restore_neutron = 1
+)
+AT (0,0,0.0001) RELATIVE PREVIOUS
+
+COMPONENT Mon16c_PostSampleAperture = Monitor_nD(
+ xwidth=guidewidth, yheight=0.03,
+ options="x y all auto",
+ restore_neutron = 1
+)
+AT (0,0,0.0001) RELATIVE PREVIOUS*/
+
+COMPONENT psd_monitor_beam = PSD_monitor( nx=100, ny=100, filename="PSD-monitor-beam", xwidth=0.02, yheight=0.02, restore_neutron=1)
+AT (0, 0,0.0001) RELATIVE PREVIOUS
+
+COMPONENT virtual_output = Virtual_output(
+    filename="Loki_out.dat")
+AT (0, 0, 0.00001) RELATIVE PREVIOUS
+
+///////////////////////////////////////////////////////////////////////////////
+
+/// Sample /////////////////////////////////////////////////////////////////////
+/*
+
+SPLIT 10
+
+COMPONENT WaterSample = Isotropic_Sqw(
+  xwidth=sampleapx,yheight=sampleapy, zdepth=0.001, Sqw_coh="H2O_liq.qSq", Sqw_inc=NULL, d_phi=75, p_interact=0.5)
+ WHEN (sampletype == 0 && usesample == 1)
+ AT (0, 0, 0.005) RELATIVE sampleaperture
+ EXTEND %{
+    if (!SCATTERED) iflag_scatt = 0;
+    if (SCATTERED) iflag_scatt = 1;
+    if (!SCATTERED) iflag_scatt_12 = 1;
+    if (SCATTERED) iflag_scatt_12 = 2;
+
+%}
+
+COMPONENT Sample = SANS_benchmark(
+        xwidth=sampleapx,yheight=sampleapy, zthick=0.001, dsdw_inc=incohb,model=sampletype)
+ WHEN (sampletype > 0 && usesample == 1)
+ AT (0, 0, 0.0051) RELATIVE sampleaperture
+ EXTEND %{
+    if (!SCATTERED) iflag_scatt = 0;
+    if (SCATTERED) iflag_scatt = 1;
+    if (!SCATTERED) iflag_scatt_12 = 1;
+    if (SCATTERED) iflag_scatt_12 = 2;
+
+%}
+/*
+////////////////////////////////////////////////////////////////////////////////
+
+/*COMPONENT PostSampleMonitor = Monitor_nD(
+ xwidth=0.03, yheight=0.03,
+ options="lambda, time, multiple, auto",
+ restore_neutron = 1
+)
+AT (0,0,0.0001) RELATIVE PREVIOUS*/
+
+/// Geant output ///////////////////////////////////////////////////////////////
+/// Output for Geant simulations to use
+/* the output ============================================================== */
+
+
+/*COMPONENT mcpl_out_postsample = MCPL_output(
+     filename=mcploutput_filename, verbose=1, userflag=iflag_scatt_12,
+     userflagcomment="user flag for neutrons SCATTERing in the sample component, 1: if no, 2: if yes")
+AT(0,0,0.0001) RELATIVE PREVIOUS // currently located at 0.0002 relative to Sample*/
+
+/// Detectors //////////////////////////////////////////////////////////////////
+
+/// Configuration taken from DST-000550
+/// + updates from JEH 2018-11
+/// + model updated AJJ 2019-07
+
+/// Front Top panel //////////////////////////////
+/// horizontal 1.2 m tubes
+/// tube spacing 28.4 mm
+/// 24 tubes = 681.6 mm height
+/*COMPONENT front_top_arm = Arm()
+AT (0,0,0) RELATIVE Sample
+ROTATED (-28.0,0,0) RELATIVE Sample
+
+COMPONENT psd_monitor_fronttop = PSD_monitor( nx=100, ny=24, filename="PSD-monitor-fronttop",xwidth=1.2, yheight=0.6816, restore_neutron=1)
+AT (0, 0, 1.340) RELATIVE front_top_arm
+ROTATED (10, 0, 0) RELATIVE front_top_arm
+
+COMPONENT front_top_detector = Monitor_nD( options="x y z kx ky kz t lambda, list all, slit", filename="front_top_detector", xwidth=1.2, yheight=0.6816, restore_neutron=1)
+AT (0, 0, 1.340) RELATIVE front_top_arm
+ROTATED (10, 0, 0) RELATIVE front_top_arm
+
+/// Front Bottom panel ///////////////////////////////////
+/// horizontal 1.2 m tubes
+/// tube spacing 28.4 mm
+/// 20 tubes = 568 mm height
+COMPONENT front_bottom_arm = Arm()
+AT (0,0,0) RELATIVE Sample
+ROTATED (28.0,0,0) RELATIVE Sample
+
+COMPONENT psd_monitor_frontbottom = PSD_monitor( nx=100, ny=20, filename="PSD-monitor-frontbottom", xwidth=1.2, yheight=0.568, restore_neutron=1)
+AT (0, 0, 1.340) RELATIVE front_bottom_arm
+ROTATED (-10, 0, 0) RELATIVE front_bottom_arm
+
+COMPONENT front_bottom_detector = Monitor_nD( options="x y z kx ky kz t lambda, list all, slit", filename="front_bottom_detector", xwidth=1.2, yheight=0.568, restore_neutron=1)
+AT (0, 0, 1.340) RELATIVE front_bottom_arm
+ROTATED (-10, 0, 0) RELATIVE front_bottom_arm
+
+/// Front left panel /////////////////////////////
+/// Vertical 1.2 m tubes
+/// tube spacing 28.4 mm
+/// 33 tubes = 937.2 mm width
+COMPONENT front_left_arm = Arm()
+AT (0,0,0) RELATIVE Sample
+ROTATED (0,25.6,0) RELATIVE Sample
+
+COMPONENT psd_monitor_frontleft = PSD_monitor( nx=33, ny=100, filename="PSD-monitor-frontleft", xwidth=0.9372, yheight=1.2, restore_neutron=1)
+AT (0, 0, 1.75) RELATIVE front_left_arm
+ROTATED (0, -15, 0) RELATIVE front_left_arm
+
+COMPONENT front_left_detector = Monitor_nD( options="x y z kx ky kz t lambda, list all, slit", filename="front_left_detector", xwidth=0.9372, yheight=1.2, restore_neutron=1)
+AT (0, 0, 1.75) RELATIVE front_left_arm
+ROTATED (0, -15, 0) RELATIVE front_left_arm
+
+/// Front right panel
+/// Vertical 1.2 m tubes
+/// tube spacing 28.4 mm
+/// 33 tubes = 937.2.0 mm width
+COMPONENT front_right_arm = Arm()
+AT (0,0,0) RELATIVE Sample
+ROTATED (0,-25.6,0) RELATIVE Sample
+
+COMPONENT psd_monitor_frontright = PSD_monitor( nx=33, ny=100, filename="PSD-monitor-frontright", xwidth=0.9372, yheight=1.2, restore_neutron=1)
+AT (0, 0, 1.75) RELATIVE front_right_arm
+ROTATED (0, 15, 0) RELATIVE front_right_arm
+
+COMPONENT front_right_detector = Monitor_nD( options="x y z kx ky kz t lambda, list all, slit", filename="front_right_detector", xwidth=0.9372, yheight=1.2, restore_neutron=1)
+AT (0, 0, 1.75) RELATIVE front_right_arm
+ROTATED (0, 15, 0) RELATIVE front_right_arm
+
+/// Middle top panel
+/// horizontal 1m tubes
+/// tube spacing 28.4 mm
+/// 16 tubes = 454.4 mm height
+COMPONENT mid_top_arm = Arm()
+AT (0,0,0) RELATIVE Sample
+ROTATED (-9.7,0,0) RELATIVE Sample
+
+COMPONENT psd_monitor_midtop = PSD_monitor( nx=100, ny=16, filename="PSD-monitor-midtop", xwidth=1, yheight=0.4544, restore_neutron=1)
+AT (0, 0, 2.95) RELATIVE mid_top_arm
+ROTATED (4, 0, 0) RELATIVE mid_top_arm
+
+COMPONENT mid_top_detector = Monitor_nD( options="x y z kx ky kz t lambda, list all, slit", filename="mid_top_detector", xwidth=1, yheight=0.4544, restore_neutron=1)
+AT (0, 0, 2.95) RELATIVE mid_top_arm
+ROTATED (4, 0, 0) RELATIVE mid_top_arm
+
+/// Middle bottom panel
+/// horizontal 1m tubes
+/// tube spacing 28.4 mm
+/// 16 tubes = 454.4 mm height
+COMPONENT mid_bottom_arm = Arm()
+AT (0,0,0) RELATIVE Sample
+ROTATED (9.7,0,0) RELATIVE Sample
+
+COMPONENT psd_monitor_midbottom = PSD_monitor( nx=100, ny=16, filename="PSD-monitor-midbottom", xwidth=1, yheight=0.4544, restore_neutron=1)
+AT (0, 0, 2.95) RELATIVE mid_bottom_arm
+ROTATED (-4, 0, 0) RELATIVE mid_bottom_arm
+
+COMPONENT mid_bottom_detector = Monitor_nD( options="x y z kx ky kz t lambda, list all, slit", filename="mid_bottom_detector", xwidth=1, yheight=0.4544, restore_neutron=1)
+AT (0, 0, 2.95) RELATIVE mid_bottom_arm
+ROTATED (-4, 0, 0) RELATIVE mid_bottom_arm
+
+/// Middle right panel
+/// vertical 0.5 m tubes
+/// tube spacing 28.4 mm
+/// 12 tubes = 340.8 mm width
+COMPONENT mid_right_arm = Arm()
+AT (0,0,0) RELATIVE Sample
+ROTATED (0,-6.5,0) RELATIVE Sample
+
+COMPONENT psd_monitor_mid_right = PSD_monitor( nx=12, ny=100, filename="PSD-monitor-midright", xwidth=0.3408, yheight=0.5, restore_neutron=1)
+AT (0, 0, 3.3) RELATIVE mid_right_arm
+ROTATED (0, 2, 0) RELATIVE mid_right_arm
+
+COMPONENT midright_detector = Monitor_nD( options="x y z kx ky kz t lambda, list all, slit", filename="midright_detector", xwidth=0.3408, yheight=0.5, restore_neutron=1)
+AT (0, 0, 3.3) RELATIVE mid_right_arm
+ROTATED (0, 2, 0) RELATIVE mid_right_arm
+
+/// Middle left panel
+/// vertical 0.5 m tubes
+/// tube spacing 28.4 mm
+/// 12 tubes = 340.8 mm width
+COMPONENT mid_left_arm = Arm()
+AT (0,0,0) RELATIVE Sample
+ROTATED (0,6.5,0) RELATIVE Sample
+
+
+COMPONENT psd_monitor_mid_left = PSD_monitor( nx=12, ny=100, filename="PSD-monitor-midleft", xwidth=0.3408, yheight=0.5, restore_neutron=1)
+AT (0, 0, 3.3) RELATIVE mid_left_arm
+ROTATED (0, -2, 0) RELATIVE mid_left_arm
+
+COMPONENT midleft_detector = Monitor_nD( options="x y z kx ky kz t lambda, list all, slit", filename="midleft_detector", xwidth=0.3408, yheight=0.5, restore_neutron=1)
+AT (0, 0, 3.3) RELATIVE mid_left_arm
+ROTATED (0, -2, 0) RELATIVE mid_left_arm*/
+
+//BEAMSTOP
+
+/*
+COMPONENT beamstop = Beamstop( xwidth=0.07, yheight=0.07)
+AT (0, 0, reardet - 0.001) RELATIVE Sample
+ROTATED (0, 0, 0) RELATIVE Sample
+
+/// Rear detector
+/// horizontal 1m tubes
+/// Taking 28.4 mm per tube, detector is 56 tubes high.
+// 56 tubes = 1.590 m height
+
+COMPONENT psd_monitor_rear = PSD_monitor( nx=100, ny=56, filename="PSD-monitor-rear", xwidth=1.0, yheight=1.59, restore_neutron=1)
+AT (0, 0,reardet) RELATIVE Sample
+
+COMPONENT rear_detector = Monitor_nD( options="x y z kx ky kz t lambda, list all, slit", filename="rear_detector", xwidth=1.0, yheight=1.59, restore_neutron=1)
+AT (0, 0,reardet) RELATIVE Sample
+
+COMPONENT monitor_nd_rear = Monitor_nD( options="lambda, time, multiple, auto", filename="rear_detector", xwidth=1.0, yheight=1.59, restore_neutron=1)
+AT (0, 0,reardet) RELATIVE Sample
+
+*/
+
+////////////////////////////////////////////////////////////////////////////////
+
+
+
+FINALLY
+%{
+
+%}
+END
+
