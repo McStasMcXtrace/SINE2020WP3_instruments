@@ -1,25 +1,22 @@
 /*******************************************************************************
 *         mcstas instrument definition url=http://www.mcstas.org
 *
-* instrument: Loki
+* instrument: Nanodisc_loki
 *
 * %identification
-* written by: andrew jackson (andrew.jackson@esss.se)
-* date: 2016-02-03 2017-07-17
-* origin: ess
-* release: mcstas 2.4
-* version: 2.0
+* written by: Viktor L. Holm (vektor.holm@gmail.com)
+* date: 2019-25-09
+* origin: KU
+* release: mcstas 2.5
+* version: 1.0
 * %instrument_site: ess
 *
 * Loki
 *
 * %description
-* model of Loki using ESS moderator
+* model of a Nanodisc experiment at Loki using virtual inputs from Loki simulation write bu Andrew Jackson.
 *
-* Notes:
-* - Testing new vertical bender component that works with gravity on
-* - Benders do not use realistic reflectivities
-* - Does not contain "realistic" detector array
+* Please note that setting ncount will <strong>not</strong> affect simulated statistics, Instrument_Mode implicitly defines the number of repetitions of the given input file used.
 *
 * Example:
 *
@@ -124,7 +121,7 @@ Rmin = sqrt(0.07*0.07+0.07*0.07);
 
 if(Instrument_Mode < 0){Instrument_Mode = 0;}
 if(Instrument_Mode > 5){Instrument_Mode = 0;}
-
+if(Instrument_Mode > 2){Repeat_Number = 2;}
 
 if(Detector_Distance == 2.0){
     if(Instrument_Mode == 0){
