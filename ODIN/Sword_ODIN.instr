@@ -63,7 +63,6 @@ double blade_angle_deg;
 double blade_angle_tip_deg;
 
 char rust_string[128];
-char VI_input[128];
 char spacial_resolution[128];
 char wavelength_spectrum[128];
 int rust_used;
@@ -173,8 +172,6 @@ if (Zoom > 10){Zoom=10;}
 
 sprintf(spacial_resolution, "/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Sword_ODIN_for_upload/Filters/2D_Filter_n600_25m.dat");
 
-sprintf(VI_input, "Virtual_Inputs/C5_1E10_Slit03/Odin_output.dat");
-
 %}
 
 
@@ -188,8 +185,6 @@ COMPONENT a1 = Progress_bar()
 COMPONENT source_gen = Source_gen(
     flux_file=wavelength_spectrum,
     dist=pinhole_detector_distance+0.01,focus_xw=0.3/Zoom,focus_yh=0.3/Zoom, 
-    //focus_aw=2.3, 
-    //focus_ah=2.3,
     Lmin = L_min,
     Lmax = L_max,
     radius=pinhole_diameter, 
@@ -197,36 +192,12 @@ COMPONENT source_gen = Source_gen(
     )
 AT (0, 0, 0) RELATIVE a1  
 
-/*
-COMPONENT virtual_input = Virtual_input(
-    filename=VI_input,
-   // filename="Virtual_Inputs/Odin_output.dat",  
-    verbose=1, 
-    repeat_count=1, 
-    smooth=1, 
-    display=0)
-WHEN(chopper_mode < 11)
-AT (0,0,0) RELATIVE a1 
-
-COMPONENT Slit_monitor = PSD_monitor(xwidth=pinhole_diameter*0.6,yheight=pinhole_diameter*0.6,nx=400,ny=400,filename="Slit_monitor.dat",restore_neutron=1)
-  AT (0,0,0.001) RELATIVE a1
-
-COMPONENT Divergence = Divergence_monitor( 
-nh = 100, nv = 100, filename = "divergence.dat", xwidth=pinhole_diameter*1.1,yheight=pinhole_diameter*1.1, maxdiv_h = 0.75, maxdiv_v = 0.75) 
-AT (0, 0,8.0015) RELATIVE a1*/
-
-
 COMPONENT graph = Arm()
 AT (0,0,0.002) RELATIVE a1
 ROTATED (0,0,0) RELATIVE a1
 
 COMPONENT Lamb_Dif = Wavelength_Diffuser(dlambda = Dlambda)
 AT (0,0,0.003) RELATIVE a1
-
-
-/*COMPONENT Beam_monitor = PSD_monitor(xwidth=0.4,yheight=0.4,nx=400,ny=400,filename="Beam_monitor.dat",restore_neutron=1)
-  AT (0,0,11.001) RELATIVE a1*/
-
 
 
 COMPONENT Al_incoherent = Incoherent_process(
@@ -794,11 +765,6 @@ COMPONENT screen = PSD_monitor_Filter(xwidth=0.3,yheight=0.3,nx=300,ny=300,filen
   pinhol_filter_distance = 25.025, pinhol_detector_distance=pinhole_detector_distance,smoothing=3.0,zoom=Zoom)
   AT (0,0,pinhole_detector_distance) RELATIVE graph    
 
-//COMPONENT screen = PSD_monitor(xwidth=1.6,yheight=1.6,nx=600,ny=600,filename="absoprtion_picture.dat",restore_neutron=1)
-//  AT (0,0,pinhole_sample_distance+sample_detector_distance) RELATIVE graph 
-
-/*COMPONENT atinuation_monitor = Attinuation_monitor(xwidth=0.06,yheight=0.15,filename="atinuation_monitor.dat",Lmin=0,Lmax=10,L_filename="/srv/mcweb/McWeb/mcsimrunner/sim-compiles/Sword_ODIN_for_upload/Filters/I_lambda_C5_cal.dat",restore_neutron=1,nL=200)
-AT (0.0,0.0,pinhole_sample_distance+sample_detector_distance) RELATIVE screen*/
 
 COMPONENT L_monitor = L_monitor(xwidth=1,yheight=1,filename="I_lambda.dat",Lmin=0,Lmax=10,restore_neutron=1,nL=200)
 AT (0.0,0.0,pinhole_detector_distance) RELATIVE screen
