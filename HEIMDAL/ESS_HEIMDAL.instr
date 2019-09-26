@@ -17,19 +17,11 @@
 * %P
 * T: [C]            temperature 
 * tau: [min]        reaction time - from 0 to 600 mins
-* use_CoFe2O4 [1]   switches compound B on/off
-* use_CoFe [1]      switches compound A on/off
-* use_magn [1]      switches magnetic peak on/off
-* HighRes  [1]      Select normal or high-resolution mode
-* dmin     [1]      Lower limit of detected d-spacing
-* dmax     [1]      High limit of detected d-spacing
-* f1: [1]           global intensity factor for sample#1
-* f2: [2]           global intensity factor for sample#2
-* f3: [3]           global intensity factor for sample#3
+* HighRes  [1]      Select normal=0 or high-resolution mode=1
 *
 * %E
 *******************************************************************************/
-DEFINE INSTRUMENT ESS_HEIMDAL(HighRes=0, T=400, tau=0, use_CoFe2O4=1, use_CoFe=1, use_magn=1, dmin=0.5, dmax=5.5, f1=0.5, f2=1, f3=1)
+DEFINE INSTRUMENT ESS_HEIMDAL(HighRes=0, T=25, tau=0)
 
 DECLARE
 %{
@@ -43,9 +35,12 @@ DECLARE
   double dPulse;
   double lmin = 0.65;
   double lmax = 2.35;
-  
+  double use_CoFe2O4=1, use_CoFe=1, use_magn=1, dmin=0.5, dmax=5.5, f1=0.5, f2=1, f3=1;
   double dfactor = 1;
 
+  char monopts[256];
+  char monopts2[256];
+  
   struct pieceswisepars {
     double min;
     double max;
@@ -98,7 +93,7 @@ INITIALIZE
 // angular range
 det_th1 = 10;
 det_th2 = 170;
-det_rad = 2;
+det_rad = 1.5;
 det_Linst = 150+det_rad;
 tof = det_Linst/hm*lam0*1e6; // tof in [us]
 tofmin = det_Linst/hm*lmin*1e6; // tof in [us]
@@ -146,7 +141,9 @@ piecewiselin(mciptau, &Itime_CoFe2O4, &pars_CoFe2O4, 1);
  } else {
    dPulse=3.86e-3*0.0017;
  }
- 
+
+ sprintf(monopts,"banana theta limits=[%g %g] bins=600, tof limits=[%g %g] bins=800",det_th1, det_th2, 0.95*tofmin/1e6, tofmax*1.05/1e6);
+ sprintf(monopts2,"banana theta limits=[%g %g] bins=600, tof limits=[%g %g] bins=800",-170.0, -55.0, 0.95*tofmin/1e6, tofmax*1.05/1e6);
 %}
 
 
@@ -197,7 +194,7 @@ AT (0, 0, 150) RELATIVE source
 EXTEND %{
     // peak intensity depends on reaction time
     p *= Itime_CoFe;
-    p *= mcipf1;
+    p *= f1;
 %}
 
 // CoFe2O4, compound B
@@ -213,7 +210,7 @@ AT (0, 0, 150) RELATIVE source
 EXTEND %{
     // peak intensity varies as a function of reaction time
     p *= Itime_CoFe2O4;
-    p *= mcipf2;
+    p *= f2;
 %}
 
 // magnetic peak
@@ -231,7 +228,7 @@ EXTEND %{
     // peak intensity diminishes as a function of temperature
     if (mcipT<Tc && mcipT>=0) {
       p *= (Tc-mcipT)/(Tc);
-      p *= mcipf3;
+      p *= f3;
       p *= Itime_CoFe2O4;
     }
     else
@@ -247,11 +244,18 @@ EXTEND %{
 // ToF vs. 2theta map
 COMPONENT psdtof = NPI_tof_theta_monitor(
     nt = 800, na = 600, filename = "tof_theta.dat",
-    radius = 2, yheight = 1, tmin = 0.95*tofmin, tmax = tofmax*1.05,
+    radius = 1.5, yheight = 1, tmin = 0.95*tofmin, tmax = tofmax*1.05,
     amin = det_th1, amax = det_th2, restore_neutron = 1,verbose=0)
-AT (0, 0, 0) RELATIVE sample_1
+    AT (0, 0, 0) RELATIVE sample_1
 
+COMPONENT psdtof2 = Monitor_nD(xwidth=3, yheight=1, filename = "tof_theta2.dat",restore_neutron = 1,
+			       options=monopts, nowritefile=1)
+    AT (0, 0, 0) RELATIVE sample_1
 
+ COMPONENT psdtof3 = Monitor_nD(xwidth=3, yheight=1, filename = "tof_theta3.dat",restore_neutron = 1,
+			       options=monopts2, nowritefile=1)
+    AT (0, 0, 0) RELATIVE sample_1
+  
 COMPONENT npi_tof_dhkl_detector = NPI_tof_dhkl_detector(
     nd=3000,
     filename="dhkl.dat",
