@@ -15,8 +15,6 @@
 * Example: lam0=2.0, dlam=1.8
 *
 * %P
-* lmax: [AA]        source min
-* lmin: [AA]        source max
 * T: [C]            temperature 
 * tau: [min]        reaction time - from 0 to 600 mins
 * use_CoFe2O4 [1]   switches compound B on/off
@@ -31,7 +29,7 @@
 *
 * %E
 *******************************************************************************/
-DEFINE INSTRUMENT ESS_HEIMDAL(HighRes=0,lmax=2.35, lmin=0.65, T=400, tau=0, use_CoFe2O4=1, use_CoFe=1, use_magn=1, dmin=0.5, dmax=5.5, f1=0.5, f2=1, f3=1)
+DEFINE INSTRUMENT ESS_HEIMDAL(HighRes=0, T=400, tau=0, use_CoFe2O4=1, use_CoFe=1, use_magn=1, dmin=0.5, dmax=5.5, f1=0.5, f2=1, f3=1)
 
 DECLARE
 %{
@@ -43,6 +41,8 @@ DECLARE
   double lam0;
   double dlam;
   double dPulse;
+  double lmin = 0.65;
+  double lmax = 2.35;
   
   double dfactor = 1;
 
@@ -96,8 +96,8 @@ INITIALIZE
 
 
 // angular range
-det_th1 = 0;
-det_th2 = 180;
+det_th1 = 10;
+det_th2 = 170;
 det_rad = 2;
 det_Linst = 150+det_rad;
 tof = det_Linst/hm*lam0*1e6; // tof in [us]
