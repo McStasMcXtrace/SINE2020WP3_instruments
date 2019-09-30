@@ -250,13 +250,14 @@ COMPONENT psdtof = NPI_tof_theta_monitor(
     amin = det_th1, amax = det_th2, restore_neutron = 1,verbose=0)
     AT (0, 0, 0) RELATIVE sample_1
 
-COMPONENT psdtof2 = Monitor_nD(xwidth=3, yheight=1, filename = "tof_theta2.dat",restore_neutron = 1,
+  /* COMPONENT psdtof2 = Monitor_nD(xwidth=3, yheight=1, filename = "tof_theta2.dat",restore_neutron = 1,
 			       options=monopts, nowritefile=1)
     AT (0, 0, 0) RELATIVE sample_1
 
  COMPONENT psdtof3 = Monitor_nD(xwidth=3, yheight=1, filename = "tof_theta3.dat",restore_neutron = 1,
 			       options=monopts2, nowritefile=1)
     AT (0, 0, 0) RELATIVE sample_1
+  */
   
 COMPONENT npi_tof_dhkl_detector = NPI_tof_dhkl_detector(
     nd=3000,
