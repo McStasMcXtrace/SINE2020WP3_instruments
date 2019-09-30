@@ -39,7 +39,8 @@ DECLARE
   double lmax = 2.35;
   double use_CoFe2O4=1, use_CoFe=1, use_magn=1, f1=0.5, f2=1, f3=1;
   double dfactor = 1;
-
+  int dbins;
+  
   char monopts[256];
   char monopts2[256];
   
@@ -103,6 +104,8 @@ tofmax = det_Linst/hm*lmax*1e6; // tof in [us]
 lam0 = (lmax+lmin)/2.0;
 dlam = (lmax-lmin)/2.0;
 
+dbins = ceil((dmax-dmin)/0.002);
+ 
 //
 // determine temperature-dependent d-spacing stretch
 dfactor = 0.02*mcipT/Tc + 1; // latices are scaled by 1% at Tc...
@@ -260,7 +263,7 @@ COMPONENT psdtof = NPI_tof_theta_monitor(
   */
   
 COMPONENT npi_tof_dhkl_detector = NPI_tof_dhkl_detector(
-    nd=3000,
+    nd=dbins,
     filename="dhkl.dat",
     yheight=1.0,
     zdepth=0.01,
