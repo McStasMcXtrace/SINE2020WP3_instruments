@@ -142,7 +142,7 @@ piecewiselin(mciptau, &Itime_CoFe2O4, &pars_CoFe2O4, 1);
 //exit(1);
 
  if (HighRes==0) {
-   dPulse=3.86e-3*0.01;
+   dPulse=3.86e-3*0.05;
  } else {
    dPulse=3.86e-3*0.0017;
  }
