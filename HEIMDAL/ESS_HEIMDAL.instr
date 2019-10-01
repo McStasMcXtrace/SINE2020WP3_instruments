@@ -168,6 +168,7 @@ AT (0,0,0) RELATIVE PREVIOUS
 EXTEND %{
   samplechoice=rand01();
   t=rand01()*dPulse;
+  p*=dPulse/3.86e-3;
 %}
 
 /*COMPONENT psd_source = PSD_monitor(
