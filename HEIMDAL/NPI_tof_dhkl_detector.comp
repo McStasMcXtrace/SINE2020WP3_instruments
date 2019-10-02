@@ -360,6 +360,7 @@ TRACE
 	*/
 	if ( (cross!=1) ||  (t0>0) || (t1<0) ) {
 		p=0;
+		ABSORB;
 	} else {
 		// go to cylinder surface = detector entry
 		PROP_DT(t1);
@@ -373,7 +374,7 @@ TRACE
 		p0=1.0-exp(-sig*zdepth);
 		tau=-1.0*log(1.0-p0*rand01())/sig/v0;
 		PROP_DT(tau);
-		p *= p0;
+		//p *= p0;
 		// add random shift by y-resolution	
 		dy = randnorm()*res_y/r8ln2;
 		y0 += dy;
@@ -464,6 +465,7 @@ TRACE
 			}
 		} else {
           p=0;  /*... not necessary ? */
+	  ABSORB;
 		}
 	}
 	if (restore_neutron) {
@@ -492,7 +494,7 @@ SAVE
 			na, nt,
 			&TOF_N[0][0],&TOF_p[0][0],&TOF_p2[0][0],
 			"overlap_map.dat");
-		}
+					}
   %}
 FINALLY
 %{
